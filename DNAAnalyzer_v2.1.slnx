@@ -1,0 +1,18 @@
+<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Folder Name="/Solution Items/">
+    <File Path=".gitignore" />
+    <File Path="LICENSE" />
+    <File Path="README.md" />
+  </Folder>
+  <Project Path="DNAAnalyzerGUI/DNAAnalyzerGUI.vcxproj" />
+  <Project Path="DNACore/DNACore.vcxproj" Id="8b8ce8dc-dd9b-42cc-9341-e6a31a49a573">
+    <Build Solution="Debug|x64" Project="false" />
+  </Project>
+  <Project Path="DNACoreBridge/DNACoreBridge.vcxproj">
+    <Build Solution="Debug|x64" Project="false" />
+  </Project>
+</Solution>
