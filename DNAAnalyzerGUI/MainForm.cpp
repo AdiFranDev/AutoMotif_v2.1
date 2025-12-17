@@ -370,6 +370,21 @@ void MainForm::btnValidate_Click(System::Object^ sender, System::EventArgs^ e) {
         return;
     }
 
+    // ===== HARDCODED: Check for lowercase FIRST =====
+    for each (Char c in txtSequence->Text) {
+        if (Char::IsLetter(c) && Char::IsLower(c)) {
+            MessageBox::Show(
+                "✗ Sequence is INVALID\n\n" +
+                "Lowercase letters are not allowed!\n\n" +
+                "Please use uppercase nucleotides only:\nA, T, G, C, U",
+                "Validation Failed",
+                MessageBoxButtons::OK,
+                MessageBoxIcon::Error
+            );
+            return;
+        }
+    }
+
     auto result = analyzer_->ValidateSequence(txtSequence->Text);
 
     if (result->IsValid) {
@@ -559,15 +574,69 @@ void MainForm::btnStatistics_Click(System::Object^ sender, System::EventArgs^ e)
 // ===== HELPER METHODS =====
 
 bool MainForm::ValidateInputs() {
+    // Check sequence is not empty
     if (String::IsNullOrWhiteSpace(txtSequence->Text)) {
         MessageBox::Show("Please enter a DNA/RNA sequence first.", "Input Required",
             MessageBoxButtons::OK, MessageBoxIcon::Warning);
         return false;
     }
 
+    // Check pattern is not empty
     if (String::IsNullOrWhiteSpace(txtPattern->Text)) {
         MessageBox::Show("Please enter a pattern to search for.", "Input Required",
             MessageBoxButtons::OK, MessageBoxIcon::Warning);
+        return false;
+    }
+
+    // ===== HARDCODED GUI-LEVEL CHECK: Reject lowercase in SEQUENCE =====
+    for each (Char c in txtSequence->Text) {
+        if (Char::IsLetter(c) && Char::IsLower(c)) {
+            MessageBox::Show(
+                "Lowercase letters are not allowed in the sequence!\n\n" +
+                "Please use uppercase nucleotides only:\nA, T, G, C, U",
+                "Validation Error",
+                MessageBoxButtons::OK,
+                MessageBoxIcon::Error
+            );
+            return false;
+        }
+    }
+
+    // ===== HARDCODED GUI-LEVEL CHECK: Reject lowercase in PATTERN =====
+    for each (Char c in txtPattern->Text) {
+        if (Char::IsLetter(c) && Char::IsLower(c)) {
+            MessageBox::Show(
+                "Lowercase letters are not allowed in the pattern!\n\n" +
+                "Please use uppercase nucleotides only:\nA, T, G, C, U",
+                "Validation Error",
+                MessageBoxButtons::OK,
+                MessageBoxIcon::Error
+            );
+            return false;
+        }
+    }
+
+    // ===== Validate sequence characters (additional validation) =====
+    auto seqResult = analyzer_->ValidateSequence(txtSequence->Text);
+    if (!seqResult->IsValid) {
+        String^ msg = "Invalid Sequence:\n\n";
+        for each (String^ err in seqResult->Errors) {
+            msg += "• " + err + "\n";
+        }
+        MessageBox::Show(msg, "Validation Error",
+            MessageBoxButtons::OK, MessageBoxIcon::Error);
+        return false;
+    }
+
+    // ===== Validate pattern characters (additional validation) =====
+    auto patResult = analyzer_->ValidatePattern(txtPattern->Text);
+    if (!patResult->IsValid) {
+        String^ msg = "Invalid Pattern:\n\n";
+        for each (String^ err in patResult->Errors) {
+            msg += "• " + err + "\n";
+        }
+        MessageBox::Show(msg, "Validation Error",
+            MessageBoxButtons::OK, MessageBoxIcon::Error);
         return false;
     }
 

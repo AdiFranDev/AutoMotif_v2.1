@@ -3,8 +3,9 @@
 namespace DNACore {
 
     // Static member definitions
-    const std::string InputValidator::STANDARD_NUCLEOTIDES = "ATGCUN";
-    const std::string InputValidator::AMBIGUITY_CODES = "RYSWKMBDHV";
+    const std::string InputValidator::VALID_NUCLEOTIDES = "ACGTU";
+    const std::string InputValidator::LOWERCASE_NUCLEOTIDES = "acgtu";
+    const std::string InputValidator::AMBIGUITY_CODES = "RYSWKMBDHVN";
 
     InputValidator::InputValidator(const Config& config)
         : config_(config) {
@@ -21,6 +22,17 @@ namespace DNACore {
             result.isValid = false;
             result.errors.push_back("Sequence is empty");
             return result;
+        }
+
+        // Check for lowercase letters BEFORE cleaning (if autoUppercase is disabled)
+        if (!config_.autoUppercase) {
+            for (char c : sequence) {
+                if (std::isalpha(static_cast<unsigned char>(c)) && std::islower(static_cast<unsigned char>(c))) {
+                    result.isValid = false;
+                    result.errors.push_back("Lowercase letters are not allowed. Please use uppercase nucleotides only (A, T, G, C, U, N)");
+                    return result;
+                }
+            }
         }
 
         // Clean and validate
@@ -64,6 +76,17 @@ namespace DNACore {
             return result;
         }
 
+        // Check for lowercase letters BEFORE cleaning (if autoUppercase is disabled)
+        if (!config_.autoUppercase) {
+            for (char c : pattern) {
+                if (std::isalpha(static_cast<unsigned char>(c)) && std::islower(static_cast<unsigned char>(c))) {
+                    result.isValid = false;
+                    result.errors.push_back("Lowercase letters are not allowed. Please use uppercase nucleotides only (A, T, G, C, U, N)");
+                    return result;
+                }
+            }
+        }
+
         result.cleanedSequence = cleanSequence(pattern, result);
         validateCharacters(result.cleanedSequence, result);
 
@@ -80,8 +103,12 @@ namespace DNACore {
                 continue;
             }
 
-            // Convert to uppercase if enabled
-            char ch = config_.autoUppercase ? std::toupper(static_cast<unsigned char>(c)) : c;
+            // DO NOT convert to uppercase - keep original case so validation can catch it
+            // Only uppercase if explicitly enabled AND we want auto-conversion
+            char ch = c;  // Keep original character
+            if (config_.autoUppercase) {
+                ch = std::toupper(static_cast<unsigned char>(c));
+            }
 
             cleaned += ch;
         }
@@ -94,11 +121,24 @@ namespace DNACore {
         size_t ambiguousCount = 0;
         std::string invalidChars;
 
+        // HARDCODED: Explicitly check for lowercase and reject it
+        for (size_t i = 0; i < seq.length(); ++i) {
+            char c = seq[i];
+
+            // Reject any lowercase letter immediately
+            if (c >= 'a' && c <= 'z') {
+                result.isValid = false;
+                result.errors.push_back("Lowercase letters are not allowed. Use uppercase only (A, T, G, C, U, N)");
+                return;
+            }
+        }
+
+        // Now validate the actual content
         for (size_t i = 0; i < seq.length(); ++i) {
             char c = seq[i];
 
             // Check if standard nucleotide
-            if (STANDARD_NUCLEOTIDES.find(c) != std::string::npos) {
+            if (VALID_NUCLEOTIDES.find(c) != std::string::npos) {
                 continue;
             }
 
@@ -134,7 +174,7 @@ namespace DNACore {
         if (ambiguousCount > 0) {
             if (config_.allowAmbiguous) {
                 result.warnings.push_back(
-                    "Ambiguous bases (N, R, Y, etc. ): " + std::to_string(ambiguousCount) +
+                    "Ambiguous bases (N, R, Y, etc.): " + std::to_string(ambiguousCount) +
                     " (" + std::to_string(ambiguousCount * 100.0 / seq.length()) + "%)"
                 );
             }

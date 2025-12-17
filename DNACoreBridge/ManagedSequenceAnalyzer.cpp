@@ -9,6 +9,12 @@ namespace DNACoreBridge {
         nativeAnalyzer_ = new DNACore::SequenceAnalyzer();
 
         DNACore::InputValidator::Config validatorConfig;
+        validatorConfig.autoUppercase = false;  // Reject lowercase instead of converting
+        validatorConfig.allowAmbiguous = false;
+        validatorConfig.allowWhitespace = true;
+        validatorConfig.minLength = 1;
+        validatorConfig.maxLength = 100000000;
+        
         nativeValidator_ = new DNACore::InputValidator(validatorConfig);
 
         pdaLogger_ = nativeAnalyzer_->getPDALogger();
