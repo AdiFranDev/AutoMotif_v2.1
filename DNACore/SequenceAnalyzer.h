@@ -54,7 +54,7 @@ namespace DNACore {
 
         /**
          * Search for known motifs using Aho-Corasick
-         * @param motifType Motif type from MotifDatabase::MotifType (1-5)
+         * @param motifType Motif type from MotifDatabase::MotifType (1-6)
          * @return Vector of motif matches
          */
         std::vector<MatchResult> searchMotif(int motifType);

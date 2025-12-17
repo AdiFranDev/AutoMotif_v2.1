@@ -51,7 +51,7 @@ namespace DNACoreBridge {
         List<ManagedMatchResult^>^ ApproximateMatch(String^ pattern, int maxDistance);
 
         /**
-         * Search for specific motif (1-5)
+         * Search for specific motif (1-6)
          */
         List<ManagedMatchResult^>^ SearchMotif(int motifType);
 

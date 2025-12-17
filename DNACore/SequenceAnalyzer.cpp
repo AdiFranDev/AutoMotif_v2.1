@@ -177,8 +177,12 @@ namespace DNACore {
         ahoCorasick_->clear();
 
         auto allMotifs = MotifDatabase::getAllMotifs();
+        
+        // Add each motif pattern
         for (const auto& motif : allMotifs) {
-            ahoCorasick_->addPattern(motif.pattern, motif.name);
+            if (!motif.pattern.empty()) {
+                ahoCorasick_->addPattern(motif.pattern, motif.name);
+            }
         }
 
         ahoCorasick_->buildAutomaton();

@@ -73,11 +73,20 @@ void MainForm::InitializeComponent(void) {
     this->btnValidate->Size = System::Drawing::Size(120, 35);
     this->btnValidate->Click += gcnew EventHandler(this, &MainForm::btnValidate_Click);
 
+    this->btnCompareSequence = gcnew Button();
+    this->btnCompareSequence->Text = L"Compare Sequence";
+    this->btnCompareSequence->Location = Point(1055, 120);
+    this->btnCompareSequence->Size = System::Drawing::Size(120, 35);
+    this->btnCompareSequence->Enabled = false;  // Disabled as placeholder
+    this->btnCompareSequence->BackColor = Color::FromArgb(230, 230, 230);  // Grayed out appearance
+    this->btnCompareSequence->ForeColor = Color::Gray;
+    this->btnCompareSequence->Click += gcnew EventHandler(this, &MainForm::btnCompareSequence_Click);
+
     // ===== PATTERN GROUP BOX =====
     this->grpPattern = gcnew GroupBox();
     this->grpPattern->Text = L"Pattern Settings";
     this->grpPattern->Location = Point(15, 170);
-    this->grpPattern->Size = System::Drawing::Size(600, 95);
+	this->grpPattern->Size = System::Drawing::Size(480, 95);
     this->grpPattern->Font = gcnew System::Drawing::Font(L"Segoe UI", 9, FontStyle::Bold);
 
     // Pattern Label
@@ -89,7 +98,7 @@ void MainForm::InitializeComponent(void) {
     // Pattern TextBox
     this->txtPattern = gcnew TextBox();
     this->txtPattern->Location = Point(75, 23);
-    this->txtPattern->Size = System::Drawing::Size(200, 25);
+    this->txtPattern->Size = System::Drawing::Size(205, 25);
     this->txtPattern->Font = gcnew System::Drawing::Font(L"Consolas", 10);
 
     // Max Distance Label
@@ -114,14 +123,15 @@ void MainForm::InitializeComponent(void) {
 
     // Motif Type ComboBox
     this->cmbMotifType = gcnew ComboBox();
-    this->cmbMotifType->Location = Point(75, 56);
+    this->cmbMotifType->Location = Point(80, 56);
     this->cmbMotifType->Size = System::Drawing::Size(200, 25);
     this->cmbMotifType->DropDownStyle = ComboBoxStyle::DropDownList;
     this->cmbMotifType->Items->Add(L"TATA Box");
     this->cmbMotifType->Items->Add(L"CAAT Box");
     this->cmbMotifType->Items->Add(L"GC Box");
     this->cmbMotifType->Items->Add(L"Kozak Sequence");
-    this->cmbMotifType->Items->Add(L"Poly-A Signal");
+    this->cmbMotifType->Items->Add(L"Poly-A Signal (DNA)");
+    this->cmbMotifType->Items->Add(L"Poly-A Signal (RNA)");
     this->cmbMotifType->SelectedIndex = 0;
 
     // Add controls to pattern group
@@ -135,57 +145,63 @@ void MainForm::InitializeComponent(void) {
     // ===== ANALYSIS GROUP BOX =====
     this->grpAnalysis = gcnew GroupBox();
     this->grpAnalysis->Text = L"Analysis Methods";
-    this->grpAnalysis->Location = Point(625, 170);
-    this->grpAnalysis->Size = System::Drawing::Size(700, 95);
+    this->grpAnalysis->Location = Point(510, 170);
+    this->grpAnalysis->Size = System::Drawing::Size(750, 95);
     this->grpAnalysis->Font = gcnew System::Drawing::Font(L"Segoe UI", 9, FontStyle::Bold);
 
     // Analysis Buttons
     this->btnExactMatch = gcnew Button();
     this->btnExactMatch->Text = L"Exact Match\n(KMP)";
-    this->btnExactMatch->Location = Point(15, 25);
-    this->btnExactMatch->Size = System::Drawing::Size(100, 60);
+    this->btnExactMatch->Location = Point(20, 25);
+    this->btnExactMatch->Size = System::Drawing::Size(110, 55);  // Wider buttons
     this->btnExactMatch->BackColor = Color::FromArgb(0, 122, 204);
     this->btnExactMatch->ForeColor = Color::White;
+    this->btnExactMatch->FlatStyle = FlatStyle::Flat;  // Cleaner look
     this->btnExactMatch->Click += gcnew EventHandler(this, &MainForm::btnExactMatch_Click);
 
     this->btnApproxMatch = gcnew Button();
     this->btnApproxMatch->Text = L"Approx Match\n(Levenshtein)";
-    this->btnApproxMatch->Location = Point(115, 25);
-    this->btnApproxMatch->Size = System::Drawing::Size(100, 60);
+    this->btnApproxMatch->Location = Point(140, 25);  // 20px gap between buttons
+    this->btnApproxMatch->Size = System::Drawing::Size(110, 55);
     this->btnApproxMatch->BackColor = Color::FromArgb(0, 150, 136);
     this->btnApproxMatch->ForeColor = Color::White;
+    this->btnApproxMatch->FlatStyle = FlatStyle::Flat;
     this->btnApproxMatch->Click += gcnew EventHandler(this, &MainForm::btnApproxMatch_Click);
 
     this->btnMotifSearch = gcnew Button();
     this->btnMotifSearch->Text = L"Search Motif\n(Aho-Corasick)";
-    this->btnMotifSearch->Location = Point(215, 25);
-    this->btnMotifSearch->Size = System::Drawing::Size(100, 60);
+    this->btnMotifSearch->Location = Point(260, 25);
+    this->btnMotifSearch->Size = System::Drawing::Size(110, 55);
     this->btnMotifSearch->BackColor = Color::FromArgb(156, 39, 176);
     this->btnMotifSearch->ForeColor = Color::White;
+    this->btnMotifSearch->FlatStyle = FlatStyle::Flat;
     this->btnMotifSearch->Click += gcnew EventHandler(this, &MainForm::btnMotifSearch_Click);
 
     this->btnAllMotifs = gcnew Button();
     this->btnAllMotifs->Text = L"All Motifs\n(Multi-Pattern)";
-    this->btnAllMotifs->Location = Point(315, 25);
-    this->btnAllMotifs->Size = System::Drawing::Size(100, 60);
+    this->btnAllMotifs->Location = Point(380, 25);
+    this->btnAllMotifs->Size = System::Drawing::Size(110, 55);
     this->btnAllMotifs->BackColor = Color::FromArgb(233, 30, 99);
     this->btnAllMotifs->ForeColor = Color::White;
+    this->btnAllMotifs->FlatStyle = FlatStyle::Flat;
     this->btnAllMotifs->Click += gcnew EventHandler(this, &MainForm::btnAllMotifs_Click);
 
     this->btnPDADetail = gcnew Button();
     this->btnPDADetail->Text = L"PDA Detail\n(Stack Trace)";
-    this->btnPDADetail->Location = Point(415, 25);
-    this->btnPDADetail->Size = System::Drawing::Size(100, 60);
+    this->btnPDADetail->Location = Point(500, 25);
+    this->btnPDADetail->Size = System::Drawing::Size(110, 55);
     this->btnPDADetail->BackColor = Color::FromArgb(255, 87, 34);
     this->btnPDADetail->ForeColor = Color::White;
+    this->btnPDADetail->FlatStyle = FlatStyle::Flat;
     this->btnPDADetail->Click += gcnew EventHandler(this, &MainForm::btnPDADetail_Click);
 
     this->btnStatistics = gcnew Button();
     this->btnStatistics->Text = L"Statistics\n(GC Content)";
-    this->btnStatistics->Location = Point(515, 25);
-    this->btnStatistics->Size = System::Drawing::Size(100, 60);
+    this->btnStatistics->Location = Point(620, 25);
+    this->btnStatistics->Size = System::Drawing::Size(110, 55);
     this->btnStatistics->BackColor = Color::FromArgb(76, 175, 80);
     this->btnStatistics->ForeColor = Color::White;
+    this->btnStatistics->FlatStyle = FlatStyle::Flat;
     this->btnStatistics->Click += gcnew EventHandler(this, &MainForm::btnStatistics_Click);
 
     // Add buttons to analysis group
@@ -203,6 +219,7 @@ void MainForm::InitializeComponent(void) {
     this->pnlTop->Controls->Add(this->btnLoadFile);
     this->pnlTop->Controls->Add(this->btnClear);
     this->pnlTop->Controls->Add(this->btnValidate);
+    this->pnlTop->Controls->Add(this->btnCompareSequence);
     this->pnlTop->Controls->Add(this->grpPattern);
     this->pnlTop->Controls->Add(this->grpAnalysis);
 
@@ -385,6 +402,16 @@ void MainForm::btnValidate_Click(System::Object^ sender, System::EventArgs^ e) {
     }
 }
 
+void MainForm::btnCompareSequence_Click(System::Object^ sender, System::EventArgs^ e) {
+    // Placeholder - feature to be implemented
+    MessageBox::Show(
+        "Compare Sequence feature is coming soon!\n\nThis will allow you to compare two DNA/RNA sequences.",
+        "Feature Coming Soon",
+        MessageBoxButtons::OK,
+        MessageBoxIcon::Information
+    );
+}
+
 void MainForm::btnExactMatch_Click(System::Object^ sender, System::EventArgs^ e) {
     if (!ValidateInputs()) return;
 
@@ -462,7 +489,10 @@ void MainForm::btnAllMotifs_Click(System::Object^ sender, System::EventArgs^ e) 
     }
 
     try {
-        analyzer_->SetSequence(txtSequence->Text);
+        // Trim whitespace from input
+        String^ sequence = txtSequence->Text->Trim();
+        
+        analyzer_->SetSequence(sequence);
         auto results = analyzer_->SearchAllMotifs();
 
         DisplayResults(results, "Aho-Corasick (Multi-Pattern)");

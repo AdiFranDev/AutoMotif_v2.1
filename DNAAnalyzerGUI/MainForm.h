@@ -52,6 +52,7 @@ namespace DNAAnalyzerGUI {
         System::Windows::Forms::Button^ btnLoadFile;
         System::Windows::Forms::Button^ btnClear;
         System::Windows::Forms::Button^ btnValidate;
+        System::Windows::Forms::Button^ btnCompareSequence;
 
         // Pattern panel
         System::Windows::Forms::GroupBox^ grpPattern;
@@ -103,6 +104,7 @@ namespace DNAAnalyzerGUI {
         // Event handlers
         void btnLoadFile_Click(System::Object^ sender, System::EventArgs^ e);
         void btnClear_Click(System::Object^ sender, System::EventArgs^ e);
+        void btnCompareSequence_Click(System::Object^ sender, System::EventArgs^ e);
         void btnValidate_Click(System::Object^ sender, System::EventArgs^ e);
         void btnExactMatch_Click(System::Object^ sender, System::EventArgs^ e);
         void btnApproxMatch_Click(System::Object^ sender, System::EventArgs^ e);

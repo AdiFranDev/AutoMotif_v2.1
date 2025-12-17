@@ -152,15 +152,21 @@ namespace DNACore {
 
             // Check for matches at current state
             for (const auto& patternInfo : current->output) {
-                size_t matchPos = i - patternInfo.pattern.length() + 1;
-
-                results.emplace_back(
-                    matchPos,
-                    patternInfo.pattern,
-                    0,  // editDistance = 0 (exact match)
-                    patternInfo.motifName,
-                    "Aho-Corasick"
-                );
+                // Calculate match position safely
+                size_t patternLen = patternInfo.pattern.length();
+                
+                // Ensure we don't underflow
+                if (i + 1 >= patternLen) {
+                    size_t matchPos = i - patternLen + 1;
+                    
+                    results.emplace_back(
+                        matchPos,
+                        patternInfo.pattern,
+                        0,  // editDistance = 0 (exact match)
+                        patternInfo.motifName,
+                        "Aho-Corasick"
+                    );
+                }
             }
         }
 
