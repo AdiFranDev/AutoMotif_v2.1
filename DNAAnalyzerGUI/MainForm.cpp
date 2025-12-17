@@ -719,40 +719,72 @@ void MainForm::DisplayTrace(String^ trace) {
     txtTrace->Clear();
     txtTrace->Text = trace;
 
-    // Syntax highlighting
+    // Set default color
     txtTrace->SelectAll();
     txtTrace->SelectionColor = Color::FromArgb(220, 220, 220);
 
-    // Highlight headers
+    // Highlight headers (===)
     int index = 0;
     while ((index = txtTrace->Find("===", index, RichTextBoxFinds::None)) != -1) {
         txtTrace->Select(index, 3);
-        txtTrace->SelectionColor = Color::FromArgb(100, 200, 255);
+        txtTrace->SelectionColor = Color::FromArgb(100, 200, 255);  // Light blue
         index += 3;
     }
 
-    // Highlight MATCH
+    // ===== FIX:  Highlight "REJECTED" in RED first =====
     index = 0;
-    while ((index = txtTrace->Find("MATCH", index, RichTextBoxFinds::None)) != -1) {
-        txtTrace->Select(index, 5);
-        txtTrace->SelectionColor = Color::FromArgb(100, 255, 100);
-        index += 5;
+    while ((index = txtTrace->Find("REJECTED", index, RichTextBoxFinds::None)) != -1) {
+        txtTrace->Select(index, 8);
+        txtTrace->SelectionColor = Color::FromArgb(255, 100, 100);  // Red
+        index += 8;
     }
 
-    // Highlight PUSH
+    // ===== FIX: Highlight "Mismatch" in RED =====
+    index = 0;
+    while ((index = txtTrace->Find("Mismatch", index, RichTextBoxFinds::None)) != -1) {
+        txtTrace->Select(index, 8);
+        txtTrace->SelectionColor = Color::FromArgb(255, 100, 100);  // Red
+        index += 8;
+    }
+
+    // ===== FIX: Only highlight "MATCH ACCEPTED" in GREEN =====
+    index = 0;
+    while ((index = txtTrace->Find("MATCH ACCEPTED", index, RichTextBoxFinds::None)) != -1) {
+        txtTrace->Select(index, 14);
+        txtTrace->SelectionColor = Color::FromArgb(100, 255, 100);  // Green
+        index += 14;
+    }
+
+    // ===== FIX:  Highlight "MATCH REJECTED" - make "MATCH" part red too =====
+    index = 0;
+    while ((index = txtTrace->Find("MATCH REJECTED", index, RichTextBoxFinds::None)) != -1) {
+        txtTrace->Select(index, 14);
+        txtTrace->SelectionColor = Color::FromArgb(255, 100, 100);  // Red
+        index += 14;
+    }
+
+    // Highlight PUSH in orange
     index = 0;
     while ((index = txtTrace->Find("PUSH", index, RichTextBoxFinds::None)) != -1) {
         txtTrace->Select(index, 4);
-        txtTrace->SelectionColor = Color::FromArgb(255, 200, 100);
+        txtTrace->SelectionColor = Color::FromArgb(255, 200, 100);  // Orange
         index += 4;
     }
 
-    // Highlight POP
+    // Highlight POP in light red/pink
     index = 0;
     while ((index = txtTrace->Find("POP", index, RichTextBoxFinds::None)) != -1) {
         txtTrace->Select(index, 3);
-        txtTrace->SelectionColor = Color::FromArgb(255, 150, 150);
+        txtTrace->SelectionColor = Color::FromArgb(255, 150, 150);  // Pink
         index += 3;
+    }
+
+    // Highlight Transition in cyan
+    index = 0;
+    while ((index = txtTrace->Find("Transition", index, RichTextBoxFinds::None)) != -1) {
+        txtTrace->Select(index, 10);
+        txtTrace->SelectionColor = Color::FromArgb(100, 255, 255);  // Cyan
+        index += 10;
     }
 
     // Reset selection

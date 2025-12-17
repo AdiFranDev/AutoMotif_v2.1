@@ -77,18 +77,19 @@ namespace DNACore {
     // ===== STACK MANAGEMENT =====
 
     void PushdownAutomaton::reset() {
+        // Clear the actual stack
         while (!stack_.empty()) {
             stack_.pop();
         }
+        // Push bottom marker
         stack_.push(StackSymbol::BOTTOM);
-        notifyPush('$', 0);
         currentState_ = 0;
     }
 
     PushdownAutomaton::StackSymbol PushdownAutomaton::charToSymbol(char c) {
         switch (c) {
         case 'A': return StackSymbol::A;
-        case 'T': return StackSymbol::T;
+        case 'T':  return StackSymbol::T;
         case 'G': return StackSymbol::G;
         case 'C': return StackSymbol::C;
         case 'U': return StackSymbol::U;
@@ -101,20 +102,34 @@ namespace DNACore {
         case StackSymbol::A: return 'A';
         case StackSymbol::T: return 'T';
         case StackSymbol::G: return 'G';
-        case StackSymbol::C: return 'C';
+        case StackSymbol::C:  return 'C';
         case StackSymbol::U: return 'U';
-        case StackSymbol::BOTTOM: return '$';
+        case StackSymbol::BOTTOM:  return '$';
         default: return '?';
         }
     }
 
-    // ===== PATTERN MATCHING =====
+    // ===== PATTERN MATCHING WITH PROPER PUSH/POP =====
 
     bool PushdownAutomaton::matchWithStack(const std::string& text, size_t start, const std::string& pattern) {
+        // Notify PUSH of bottom marker '$' - this signals new attempt
+        notifyPush('$', start);
+
+        // Track pushed characters for POP
+        size_t pushedCount = 0;
+
         for (size_t i = 0; i < pattern.length(); ++i) {
             size_t textPos = start + i;
 
             if (textPos >= text.length()) {
+                // POP everything before rejecting (in reverse order)
+                for (size_t j = pushedCount; j > 0; --j) {
+                    StackSymbol top = stack_.top();
+                    stack_.pop();
+                    notifyPop(symbolToChar(top), textPos);
+                }
+                // ALWAYS POP the bottom marker '$'
+                notifyPop('$', start);
                 notifyMatchRejected(textPos, "Sequence too short");
                 return false;
             }
@@ -123,20 +138,42 @@ namespace DNACore {
             char patternChar = pattern[i];
 
             if (textChar != patternChar) {
-                notifyMatchRejected(textPos,
+                // POP everything before rejecting (in reverse order)
+                for (size_t j = pushedCount; j > 0; --j) {
+                    StackSymbol top = stack_.top();
+                    stack_.pop();
+                    notifyPop(symbolToChar(top), start + j - 1);
+                }
+                // ALWAYS POP the bottom marker '$'
+                notifyPop('$', start);
+                notifyMatchRejected(start,
                     std::string("Mismatch: expected ") + patternChar + ", got " + textChar);
                 return false;
             }
 
-            // State transition
+            // Match!  Transition and push
             notifyTransition(currentState_, currentState_ + 1, textChar, textPos);
             currentState_++;
 
-            // Push to stack
             auto sym = charToSymbol(textChar);
             stack_.push(sym);
             notifyPush(textChar, textPos);
+            pushedCount++;
         }
+
+        // SUCCESS! POP all characters in reverse order FIRST
+        size_t popPosition = start + pattern.length() - 1;
+        for (size_t j = 0; j < pushedCount; ++j) {
+            StackSymbol top = stack_.top();
+            stack_.pop();
+            notifyPop(symbolToChar(top), popPosition - j);
+        }
+        
+        // ALWAYS POP the bottom marker '$'
+        notifyPop('$', start);
+        
+        // THEN notify match found (so POPs appear before "MATCH ACCEPTED")
+        notifyMatchFound(start, text.substr(start, pattern.length()));
 
         return true;
     }
@@ -159,9 +196,9 @@ namespace DNACore {
             return results;
         }
 
-        // Search all positions
+        // Search at all valid positions
         for (size_t i = 0; i <= n - m; ++i) {
-            reset();
+            reset();  // Reset stack and state for each new position
 
             if (matchWithStack(text, i, pattern)) {
                 results.emplace_back(
@@ -171,7 +208,7 @@ namespace DNACore {
                     "PDA Match",
                     "PDA"
                 );
-                notifyMatchFound(i, text.substr(i, m));
+                // notifyMatchFound is now called inside matchWithStack
             }
         }
 

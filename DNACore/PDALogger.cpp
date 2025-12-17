@@ -1,4 +1,5 @@
 #include "PDALogger.h"
+#include <iomanip>
 
 namespace DNACore {
 
@@ -14,8 +15,18 @@ namespace DNACore {
         currentStackDepth_ = 0;
     }
 
+    void PDALogger::resetStackDepth() {
+        currentStackDepth_ = 0;
+    }
+
     void PDALogger::onPush(char symbol, int state, size_t position) {
-        currentStackDepth_++;
+        // RESET stack depth when we see '$' (bottom marker - new attempt)
+        if (symbol == '$') {
+            currentStackDepth_ = 0;  // Start from 0, will increment below
+        }
+        
+        currentStackDepth_++;  // Increment for this push
+        
         entries_.emplace_back(
             LogEntry::Type::PUSH,
             position,
@@ -27,7 +38,10 @@ namespace DNACore {
     }
 
     void PDALogger::onPop(char symbol, int state, size_t position) {
+        // Decrement stack depth BEFORE logging (so we show the depth after pop)
         currentStackDepth_ = (currentStackDepth_ > 0) ? currentStackDepth_ - 1 : 0;
+        
+        // Add POP entry - this MUST show in output
         entries_.emplace_back(
             LogEntry::Type::POP,
             position,
@@ -56,7 +70,7 @@ namespace DNACore {
             position,
             -1,
             '\0',
-            "MATCH ACCEPTED at position " + std::to_string(position) + ": " + matched,
+            ">>> MATCH ACCEPTED <<<",
             currentStackDepth_
         );
     }
@@ -67,7 +81,7 @@ namespace DNACore {
             position,
             -1,
             '\0',
-            "MATCH REJECTED: " + reason,
+            ">>> REJECTED: " + reason,
             currentStackDepth_
         );
     }
@@ -104,121 +118,51 @@ namespace DNACore {
             const auto& entry = entries_[i];
             oss << "[" << (i + 1) << "] ";
 
-            if (entry.position > 0) {
-                oss << "Pos " << entry.position << ": ";
+            // Add position prefix
+            if (entry.type == LogEntry::Type::INFO) {
+                oss << "          ";
+            }
+            else if (entry.type == LogEntry::Type::PUSH && entry.symbol == '$') {
+                oss << "          ";  // '$' PUSH doesn't show position
+            }
+            else if (entry.type == LogEntry::Type::POP && entry.symbol == '$') {
+                oss << "          ";  // '$' POP doesn't show position
+            }
+            else if (entry.type == LogEntry::Type::MATCH_FOUND || entry.type == LogEntry::Type::MATCH_REJECTED) {
+                oss << "          ";  // Match results don't show position
+            }
+            else {
+                // Show position for transitions and character PUSH/POP
+                oss << "Pos " << std::setw(3) << entry.position << ": ";
             }
 
-            // Indentation based on stack depth
-            for (size_t d = 0; d < entry.stackDepth * 2; ++d) {
-                oss << " ";
+            // Add indentation based on stack depth
+            size_t indent = (entry.stackDepth < 20) ? entry.stackDepth : 20;
+            for (size_t j = 0; j < indent; ++j) {
+                oss << " ";  // Single space per indent level
             }
 
-            oss << entry.message << "\n";
+            oss << entry.message;
+
+            // Add stack depth for PUSH/POP with extra spacing for alignment
+            if (entry.type == LogEntry::Type::PUSH || entry.type == LogEntry::Type::POP) {
+                oss << " [Stack: " << entry.stackDepth << "]";
+            }
+
+            oss << "\n";
         }
 
         return oss.str();
     }
 
     std::string PDALogger::formatLogFormatted() const {
-        std::ostringstream oss;
-
-        oss << "[1]  === PDA ANALYSIS START ===\n";
-
-        // Extract sequence info from first INFO entry
-        for (const auto& entry : entries_) {
-            if (entry.type == LogEntry::Type::INFO &&
-                entry.message.find("Sequence Length") != std::string::npos) {
-                size_t lenPos = entry.message.find("Sequence Length: ");
-                size_t patPos = entry.message.find("Pattern: ");
-
-                if (lenPos != std::string::npos) {
-                    size_t start = lenPos + 17;
-                    size_t end = entry.message.find('\n', start);
-                    if (end == std::string::npos) end = entry.message.length();
-                    oss << "     Sequence Length: " << entry.message.substr(start, end - start) << "\n";
-                }
-
-                if (patPos != std::string::npos) {
-                    size_t start = patPos + 9;
-                    oss << "     Pattern: " << entry.message.substr(start) << "\n";
-                }
-                break;
-            }
-        }
-
-        int lineNum = 2;
-
-        for (const auto& entry : entries_) {
-            if (entry.type == LogEntry::Type::INFO) continue;
-
-            oss << "[" << lineNum++ << "] ";
-
-            if (entry.position > 0) {
-                char posStr[20];
-                snprintf(posStr, sizeof(posStr), "Pos %3zu: ", entry.position);
-                oss << posStr;
-            }
-            else {
-                oss << "         ";
-            }
-
-            // Indentation
-            for (size_t d = 0; d < entry.stackDepth * 2; ++d) {
-                oss << " ";
-            }
-
-            // Type-specific formatting
-            switch (entry.type) {
-            case LogEntry::Type::PUSH: {
-                char opStr[50];
-                snprintf(opStr, sizeof(opStr), "PUSH '%c' [Stack: %zu]",
-                    entry.symbol, entry.stackDepth);
-                oss << opStr;
-                break;
-            }
-
-            case LogEntry::Type::POP: {
-                char opStr[50];
-                snprintf(opStr, sizeof(opStr), "POP  '%c' [Stack: %zu]",
-                    entry.symbol, entry.stackDepth);
-                oss << opStr;
-                break;
-            }
-
-            case LogEntry::Type::TRANSITION: {
-                char opStr[100];
-                snprintf(opStr, sizeof(opStr), "Transition: q%d -> q%d on '%c'",
-                    entry.state - 1, entry.state, entry.symbol);
-                oss << opStr;
-                break;
-            }
-
-            case LogEntry::Type::MATCH_FOUND:
-                oss << ">>> MATCH ACCEPTED <<<";
-                break;
-
-            case LogEntry::Type::MATCH_REJECTED:
-                oss << ">>> REJECTED: " << entry.message;
-                break;
-
-            default:
-                oss << entry.message;
-                break;
-            }
-
-            oss << "\n";
-        }
-
-        oss << "[" << lineNum << "] === ANALYSIS COMPLETE ===\n";
-        return oss.str();
+        return formatLog();
     }
 
     size_t PDALogger::getPushCount() const {
         size_t count = 0;
         for (const auto& entry : entries_) {
-            if (entry.type == LogEntry::Type::PUSH) {
-                count++;
-            }
+            if (entry.type == LogEntry::Type::PUSH) count++;
         }
         return count;
     }
@@ -226,9 +170,7 @@ namespace DNACore {
     size_t PDALogger::getPopCount() const {
         size_t count = 0;
         for (const auto& entry : entries_) {
-            if (entry.type == LogEntry::Type::POP) {
-                count++;
-            }
+            if (entry.type == LogEntry::Type::POP) count++;
         }
         return count;
     }

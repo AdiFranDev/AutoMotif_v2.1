@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <sstream>
+#include <iomanip>
 
 namespace DNACore {
 
@@ -51,9 +52,12 @@ namespace DNACore {
         const std::vector<LogEntry>& getLog() const { return entries_; }
         void clear();
 
+        // Reset stack depth (called when PDA resets for new position)
+        void resetStackDepth();
+
         // Formatted output
         std::string formatLog() const;
-        std::string formatLogFormatted() const;  // Enhanced formatting for GUI
+        std::string formatLogFormatted() const;
 
         // Statistics
         size_t entryCount() const { return entries_.size(); }
