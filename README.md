@@ -1,4 +1,11 @@
-﻿# AutoMotif DNA and RNA Sequence Analyzer
+﻿# Authors & Contributors
+    Francis Adrian Esteban 
+    John Carl Ramirez
+    Cydney Ruelo
+    Julien Marabe 
+
+
+# AutoMotif DNA and RNA Sequence Analyzer
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![.NET](https://img.shields.io/badge/.NET-Framework%204.8-purple)
