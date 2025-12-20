@@ -1,10 +1,10 @@
-﻿# Authors & Contributors
-    Francis Adrian Esteban 
-    John Carl Ramirez
-    Cydney Ruelo
-    Julien Marabe 
+﻿## 👥 Authors & Contributors
 
-
+- **Francis Adrian Esteban** - *Developer* - [YourGitHub](https://github.com/AdiFranDev)
+- **John Carl Ramirez** - *Developer* - [YourGitHub](https://github.com/cjohnramirez)
+- **Cydney Ruelo** - *Developer & Defender*
+- **Julien Marabe** - *Developer*
+- 
 # AutoMotif DNA and RNA Sequence Analyzer
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
@@ -56,7 +56,8 @@ A sophisticated DNA and RNA sequence analysis tool featuring multiple pattern ma
 
 1. **Clone the repository**
 
-git clone https://github.com/yourusername/DNAAnalyzerGUI.git 
+git clone https://github.com/AdiFranDev/AutoMotif_v2.1.git
+
 cd DNAAnalyzerGUI
 
 2. **Open the solution**
@@ -183,10 +184,6 @@ Contributions are welcome! Please follow these steps:
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 👥 Authors
-
-- **Your Name** - *Initial work* - [YourGitHub](https://github.com/yourusername)
-
 ## 🙏 Acknowledgments
 
 - Inspired by bioinformatics research needs
@@ -195,7 +192,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📧 Contact
 
-- **Email**: your.email@example.com
+- **Email**: estebanfrancisadrian@gmail.com 
 - **Project Link**: https://github.com/yourusername/DNAAnalyzerGUI
 - **Issues**: https://github.com/yourusername/DNAAnalyzerGUI/issues
 
