@@ -2,8 +2,8 @@
 
 - **Francis Adrian Esteban** - *Developer* - [AdiFranDev](https://github.com/AdiFranDev)
 - **John Carl Ramirez** - *Developer* - [cjohnramirez](https://github.com/cjohnramirez)
-- **Cydney Ruelo** - *Developer & Defender*
-- **Julien Marabe** - *Developer*
+- **Cydney Ruelo** - *Developer & Defender* - [] ()
+- **Julien Marabe** - *Developer* - [Julien032205](https://github.com/Julien032205)
 
 # AutoMotif DNA and RNA Sequence Analyzer
 
@@ -14,7 +14,6 @@
 
 A sophisticated DNA and RNA sequence analysis tool featuring multiple pattern matching algorithms and motif detection capabilities.
 
-![Application Screenshot](docs/screenshots/main-window.png)
 
 ## 🧬 Features
 
@@ -41,7 +40,6 @@ A sophisticated DNA and RNA sequence analysis tool featuring multiple pattern ma
   - Color-coded results based on match quality
   - Detailed execution traces
   - Real-time validation
-  - Export capabilities
 
 ## 🚀 Getting Started
 
@@ -171,7 +169,7 @@ Contributions are welcome! Please follow these steps:
 2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
 3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
 4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+5. Open a Pull Request to [https://github.com/AdiFranDev/AutoMotif_v2.1](https://github.com/AdiFranDev/AutoMotif_v2.1)
 
 ### Coding Standards
 
