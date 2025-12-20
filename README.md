@@ -2,7 +2,7 @@
 
 - **Francis Adrian Esteban** - *Developer* - [AdiFranDev](https://github.com/AdiFranDev)
 - **John Carl Ramirez** - *Developer* - [cjohnramirez](https://github.com/cjohnramirez)
-- **Cydney Ruelo** - *Developer & Defender* - [] ()
+- **Cydney Ruelo** - *Developer & Defender* - [Cydney](https://github.com/Sidnaur)
 - **Julien Marabe** - *Developer* - [Julien032205](https://github.com/Julien032205)
 
 # AutoMotif DNA and RNA Sequence Analyzer
@@ -191,8 +191,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 📧 Contact
 
 - **Email**: estebanfrancisadrian@gmail.com 
-- **Project Link**: https://github.com/yourusername/DNAAnalyzerGUI
-- **Issues**: https://github.com/yourusername/DNAAnalyzerGUI/issues
+- **Project Link**: https://github.com/AdiFranDev/AutoMotif_v2.1.git
+- **Issues**: https://github.com/AdiFranDev/AutoMotif_v2.1/issues
 
 ## 🗺️ Roadmap
 
