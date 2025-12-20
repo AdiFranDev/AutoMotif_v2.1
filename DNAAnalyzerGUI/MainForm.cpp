@@ -17,7 +17,7 @@ void MainForm::InitializeComponent(void) {
     this->SuspendLayout();
 
     // ===== FORM SETUP =====
-    this->Text = L"AutoMotif DNA and RNA Sequence Analyzer v2.1";
+    this->Text = L"AutoMotif DNA Sequence Analyzer v2.1";
     this->Size = System::Drawing::Size(1400, 900);
     this->StartPosition = FormStartPosition::CenterScreen;
     this->MinimumSize = System::Drawing::Size(1200, 700);
@@ -32,7 +32,7 @@ void MainForm::InitializeComponent(void) {
 
     // Title
     this->lblTitle = gcnew Label();
-    this->lblTitle->Text = L"AutoMotif The DNA and RNA Sequence Analyzer";
+    this->lblTitle->Text = L"AutoMotif The DNA Sequence Analyzer";
     this->lblTitle->Font = gcnew System::Drawing::Font(L"Segoe UI", 18, FontStyle::Bold);
     this->lblTitle->Location = Point(15, 10);
     this->lblTitle->Size = System::Drawing::Size(500, 35);
@@ -40,7 +40,7 @@ void MainForm::InitializeComponent(void) {
 
     // Sequence Label
     this->lblSequenceInput = gcnew Label();
-    this->lblSequenceInput->Text = L"DNA and RNA Sequence:";
+    this->lblSequenceInput->Text = L"DNA Sequence:";
     this->lblSequenceInput->Font = gcnew System::Drawing::Font(L"Segoe UI", 10, FontStyle::Bold);
     this->lblSequenceInput->Location = Point(15, 55);
     this->lblSequenceInput->Size = System::Drawing::Size(150, 25);
@@ -72,15 +72,6 @@ void MainForm::InitializeComponent(void) {
     this->btnValidate->Location = Point(1055, 80);
     this->btnValidate->Size = System::Drawing::Size(120, 35);
     this->btnValidate->Click += gcnew EventHandler(this, &MainForm::btnValidate_Click);
-
-    this->btnCompareSequence = gcnew Button();
-    this->btnCompareSequence->Text = L"Compare Sequence";
-    this->btnCompareSequence->Location = Point(1055, 120);
-    this->btnCompareSequence->Size = System::Drawing::Size(120, 35);
-    this->btnCompareSequence->Enabled = false;  // Disabled as placeholder
-    this->btnCompareSequence->BackColor = Color::FromArgb(230, 230, 230);  // Grayed out appearance
-    this->btnCompareSequence->ForeColor = Color::Gray;
-    this->btnCompareSequence->Click += gcnew EventHandler(this, &MainForm::btnCompareSequence_Click);
 
     // ===== PATTERN GROUP BOX =====
     this->grpPattern = gcnew GroupBox();
@@ -131,7 +122,6 @@ void MainForm::InitializeComponent(void) {
     this->cmbMotifType->Items->Add(L"GC Box");
     this->cmbMotifType->Items->Add(L"Kozak Sequence");
     this->cmbMotifType->Items->Add(L"Poly-A Signal (DNA)");
-    this->cmbMotifType->Items->Add(L"Poly-A Signal (RNA)");
     this->cmbMotifType->SelectedIndex = 0;
 
     // Add controls to pattern group
@@ -219,7 +209,6 @@ void MainForm::InitializeComponent(void) {
     this->pnlTop->Controls->Add(this->btnLoadFile);
     this->pnlTop->Controls->Add(this->btnClear);
     this->pnlTop->Controls->Add(this->btnValidate);
-    this->pnlTop->Controls->Add(this->btnCompareSequence);
     this->pnlTop->Controls->Add(this->grpPattern);
     this->pnlTop->Controls->Add(this->grpAnalysis);
 
@@ -346,8 +335,21 @@ void MainForm::btnLoadFile_Click(System::Object^ sender, System::EventArgs^ e) {
     if (dialog->ShowDialog() == System::Windows::Forms::DialogResult::OK) {
         try {
             String^ content = System::IO::File::ReadAllText(dialog->FileName);
-            txtSequence->Text = content;
-            UpdateStatus("File loaded: " + dialog->FileName);
+            
+            // ===== FIX: Parse FASTA format - remove header lines starting with '>' =====
+            String^ cleanedContent = "";
+            array<String^>^ lines = content->Split(gcnew array<Char>{'\n', '\r'}, StringSplitOptions::RemoveEmptyEntries);
+            
+            for each (String^ line in lines) {
+                String^ trimmedLine = line->Trim();
+                // Skip FASTA header lines (starting with '>')
+                if (!trimmedLine->StartsWith(">") && !String::IsNullOrWhiteSpace(trimmedLine)) {
+                    cleanedContent += trimmedLine;
+                }
+            }
+            
+            txtSequence->Text = cleanedContent->Trim();
+            UpdateStatus("File loaded: " + dialog->FileName + " (cleaned " + cleanedContent->Length + " bp)");
         }
         catch (Exception^ ex) {
             MessageBox::Show("Error loading file: " + ex->Message, "Error",
@@ -478,14 +480,25 @@ void MainForm::btnMotifSearch_Click(System::Object^ sender, System::EventArgs^ e
     }
 
     try {
-        analyzer_->SetSequence(txtSequence->Text);
+        // ===== FIX: Clean and trim sequence before searching =====
+        String^ sequence = txtSequence->Text->Trim();
+        analyzer_->SetSequence(sequence);
+        
         int motifType = cmbMotifType->SelectedIndex + 1; // 1-based index
         auto results = analyzer_->SearchMotif(motifType);
 
         DisplayResults(results, "Aho-Corasick");
 
-        // Display DFA trace
+        // Display DFA trace with diagnostic info
         String^ trace = analyzer_->GetDFATrace();
+        
+        // ===== ADD DIAGNOSTIC OUTPUT =====
+        trace += "\n\n=== DIAGNOSTIC INFO ===\n";
+        trace += "Sequence entered: '" + txtSequence->Text + "'\n";
+        trace += "Sequence length: " + sequence->Length + " bp\n";
+        trace += "Motif type selected: " + cmbMotifType->Text + " (ID: " + motifType + ")\n";
+        trace += "Matches found: " + results->Count + "\n";
+        
         DisplayTrace(trace);
 
         UpdateStatus("Motif search completed. Found " + results->Count + " occurrences of " + cmbMotifType->Text + ".");
@@ -504,7 +517,7 @@ void MainForm::btnAllMotifs_Click(System::Object^ sender, System::EventArgs^ e) 
     }
 
     try {
-        // Trim whitespace from input
+        // ===== FIX: Trim whitespace from input =====
         String^ sequence = txtSequence->Text->Trim();
         
         analyzer_->SetSequence(sequence);
@@ -512,8 +525,22 @@ void MainForm::btnAllMotifs_Click(System::Object^ sender, System::EventArgs^ e) 
 
         DisplayResults(results, "Aho-Corasick (Multi-Pattern)");
 
-        // Display DFA trace
+        // Display DFA trace with diagnostic info
         String^ trace = analyzer_->GetDFATrace();
+        
+        // ===== ADD DIAGNOSTIC OUTPUT =====
+        trace += "\n\n=== DIAGNOSTIC INFO ===\n";
+        trace += "Sequence entered: '" + txtSequence->Text + "'\n";
+        trace += "Cleaned sequence: '" + sequence + "'\n";
+        trace += "Sequence length: " + sequence->Length + " bp\n";
+        trace += "Total matches found: " + results->Count + "\n";
+        trace += "\nMotif patterns being searched:\n";
+        trace += "  1. TATA Box: TATAAA\n";
+        trace += "  2. CAAT Box: GGCCAATCT\n";
+        trace += "  3. GC Box: GGGCGG\n";
+        trace += "  4. Kozak Sequence: GCCACCATGG\n";
+        trace += "  5. Poly-A Signal (DNA): AATAAA\n";
+        
         DisplayTrace(trace);
 
         UpdateStatus("All motifs search completed. Found " + results->Count + " total motif occurrences.");
@@ -554,7 +581,8 @@ void MainForm::btnPDADetail_Click(System::Object^ sender, System::EventArgs^ e) 
 void MainForm::btnStatistics_Click(System::Object^ sender, System::EventArgs^ e) {
     if (String::IsNullOrWhiteSpace(txtSequence->Text)) {
         MessageBox::Show("Please enter a DNA/RNA sequence first.", "Input Required",
-            MessageBoxButtons::OK, MessageBoxIcon::Warning);
+            MessageBoxButtons::OK,
+            MessageBoxIcon::Warning);
         return;
     }
 
@@ -800,4 +828,3 @@ void MainForm::ClearResults() {
 void MainForm::UpdateStatus(String^ message) {
     statusLabel->Text = message + " | " + DateTime::Now.ToString("HH:mm:ss");
 }
-

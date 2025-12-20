@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <string>
 #include <vector>
@@ -39,44 +39,57 @@ namespace DNACore {
 
         /**
          * Exact pattern matching using KMP algorithm
-         * @param pattern The pattern to search for
-         * @return Vector of exact matches
          */
         std::vector<MatchResult> exactMatch(const std::string& pattern);
 
         /**
          * Approximate matching using edit distance
-         * @param pattern The pattern to search for
-         * @param maxDistance Maximum edit distance allowed
-         * @return Vector of approximate matches
          */
         std::vector<MatchResult> approximateMatch(const std::string& pattern, int maxDistance);
 
         /**
          * Search for known motifs using Aho-Corasick
-         * @param motifType Motif type from MotifDatabase::MotifType (1-6)
-         * @return Vector of motif matches
          */
         std::vector<MatchResult> searchMotif(int motifType);
 
         /**
          * Search for all known motifs
-         * @return Vector of all motif matches found
          */
         std::vector<MatchResult> searchAllMotifs();
 
         /**
          * PDA-based search with detailed tracing
-         * @param pattern The pattern to search for
-         * @return Vector of matches
          */
         std::vector<MatchResult> pushdownSearch(const std::string& pattern);
+
+        // ===== NEW:  REGEX SEARCH ===== (ADD THIS SECTION)
+
+        /**
+         * Search using regex pattern (compiled to NFA)
+         * @param pattern Regex pattern (e.g., "A(T|G)*C")
+         * @return Vector of matches
+         */
+        std::vector<MatchResult> regexSearch(const std::string& pattern);
+
+        /**
+         * Get NFA description for visualization
+         */
+        std::string getNFADescription() const;
+
+        /**
+         * Get regex engine trace
+         */
+        std::string getRegexTrace() const;
+
+        /**
+         * Get regex compilation error (if any)
+         */
+        std::string getRegexError() const;
 
         // ===== STATISTICS =====
 
         /**
          * Calculate sequence statistics
-         * @return SequenceStatistics structure
          */
         SequenceStatistics getStatistics() const;
 
@@ -87,19 +100,8 @@ namespace DNACore {
 
         // ===== TRACERS =====
 
-        /**
-         * Get DFA tracer for summary traces (KMP, Aho-Corasick)
-         */
         DFATracer* getDFATracer() { return &dfaTracer_; }
-
-        /**
-         * Get PDA logger for detailed traces
-         */
         PDALogger* getPDALogger() { return &pdaLogger_; }
-
-        /**
-         * Get PDA instance for observer attachment
-         */
         PushdownAutomaton* getPDA() { return pda_.get(); }
 
     private:

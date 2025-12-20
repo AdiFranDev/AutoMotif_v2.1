@@ -4,8 +4,8 @@ namespace DNACore {
 
     SequenceAnalyzer::SequenceAnalyzer()
         : kmpMatcher_(std::make_unique<KMPMatcher>()),
-        ahoCorasick_(std::make_unique<AhoCorasick>()),
-        pda_(std::make_unique<PushdownAutomaton>()) {
+          ahoCorasick_(std::make_unique<AhoCorasick>()),
+          pda_(std::make_unique<PushdownAutomaton>()),
     }
 
     SequenceAnalyzer::~SequenceAnalyzer() {

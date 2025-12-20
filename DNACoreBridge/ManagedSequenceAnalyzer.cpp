@@ -203,4 +203,24 @@ namespace DNACoreBridge {
         return managedResult;
     }
 
+    // ===== REGEX SEARCH ===== (ADD THIS SECTION)
+
+    List<ManagedMatchResult^>^ ManagedSequenceAnalyzer::RegexSearch(String^ pattern) {
+        std::string nativePattern = TypeConverters::ToStdString(pattern);
+        auto nativeResults = nativeAnalyzer_->regexSearch(nativePattern);
+        return ConvertResults(nativeResults);
+    }
+
+    String^ ManagedSequenceAnalyzer::GetNFADescription() {
+        return TypeConverters::ToManagedString(nativeAnalyzer_->getNFADescription());
+    }
+
+    String^ ManagedSequenceAnalyzer::GetRegexTrace() {
+        return TypeConverters::ToManagedString(nativeAnalyzer_->getRegexTrace());
+    }
+
+    String^ ManagedSequenceAnalyzer::GetRegexError() {
+        return TypeConverters::ToManagedString(nativeAnalyzer_->getRegexError());
+    }
+
 } // namespace DNACoreBridge

@@ -17,7 +17,7 @@ using namespace System::Collections::Generic;
 namespace DNACoreBridge {
 
     /**
-     * .NET wrapper for DNACore::SequenceAnalyzer
+     * . NET wrapper for DNACore:: SequenceAnalyzer
      * Provides managed interface to native C++ functionality
      */
     public ref class ManagedSequenceAnalyzer {
@@ -27,88 +27,34 @@ namespace DNACoreBridge {
         !ManagedSequenceAnalyzer();  // Finalizer
 
         // ===== SEQUENCE MANAGEMENT =====
-
-        /**
-         * Set the sequence to analyze
-         */
         void SetSequence(String^ sequence);
-
-        /**
-         * Get current sequence
-         */
         String^ GetSequence();
 
         // ===== SEARCH METHODS =====
-
-        /**
-         * Exact pattern matching using KMP
-         */
         List<ManagedMatchResult^>^ ExactMatch(String^ pattern);
-
-        /**
-         * Approximate matching with edit distance
-         */
         List<ManagedMatchResult^>^ ApproximateMatch(String^ pattern, int maxDistance);
-
-        /**
-         * Search for specific motif (1-6)
-         */
         List<ManagedMatchResult^>^ SearchMotif(int motifType);
-
-        /**
-         * Search for all known motifs
-         */
         List<ManagedMatchResult^>^ SearchAllMotifs();
-
-        /**
-         * PDA search with detailed tracing
-         */
         List<ManagedMatchResult^>^ PDASearch(String^ pattern);
 
+        // ===== REGEX SEARCH (NEW) =====
+        List<ManagedMatchResult^>^ RegexSearch(String^ pattern);
+        String^ GetNFADescription();
+        String^ GetRegexTrace();
+        String^ GetRegexError();
+
         // ===== STATISTICS =====
-
-        /**
-         * Get sequence statistics
-         */
         ManagedSequenceStatistics^ GetStatistics();
-
-        /**
-         * Calculate GC content
-         */
         double CalculateGCContent();
 
         // ===== TRACING =====
-
-        /**
-         * Get DFA summary trace (for KMP, Aho-Corasick)
-         */
         String^ GetDFATrace();
-
-        /**
-         * Get detailed PDA trace
-         */
         String^ GetPDATrace();
-
-        /**
-         * Clear PDA logger
-         */
         void ClearPDALogger();
-
-        /**
-         * Attach PDA observer for next search
-         */
         void AttachPDAObserver();
 
         // ===== VALIDATION =====
-
-        /**
-         * Validate a sequence
-         */
         ManagedValidationResult^ ValidateSequence(String^ sequence);
-
-        /**
-         * Validate a pattern
-         */
         ManagedValidationResult^ ValidatePattern(String^ pattern);
 
     private:

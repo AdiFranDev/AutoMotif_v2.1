@@ -1,0 +1,1449 @@
+================================================================================
+               DNA ANALYZER V2.1 - ALGORITHM DOCUMENTATION
+                    Pattern Matching Algorithms Guide
+================================================================================
+
+Author: AutoMotif DNA Analyzer Team
+Date: 2024
+Version: 2.1
+Repository: https://github.com/AdiFranDev/AutoMotif_v2.1
+
+================================================================================
+TABLE OF CONTENTS
+================================================================================
+
+1. Overview
+2. Algorithm 1: KMP (Knuth-Morris-Pratt) Exact Matching
+3. Algorithm 2: Levenshtein Distance (Fuzzy/Approximate Matching)
+4. Algorithm 3: Aho-Corasick Multi-Pattern Matching
+5. Algorithm 4: PDA (Pushdown Automaton) Pattern Matching
+6. Algorithm Comparison Table
+7. Implementation Architecture
+8. Usage Examples
+
+================================================================================
+1. OVERVIEW
+================================================================================
+
+This DNA Analyzer application implements four sophisticated pattern matching
+algorithms for analyzing DNA and RNA sequences:
+
+1. KMP - Fast exact pattern matching
+2. Levenshtein - Approximate matching with edit distance
+3. Aho-Corasick - Multiple pattern matching (motif search)
+4. PDA - Educational pattern matching with detailed stack traces
+
+All algorithms process uppercase nucleotide sequences:
+- DNA: A, T, G, C
+- RNA: A, U, G, C
+
+================================================================================
+2. ALGORITHM 1: KMP (KNUTH-MORRIS-PRATT) EXACT MATCHING
+================================================================================
+
+--------------------------------------------------------------------------------
+2.1 PURPOSE
+--------------------------------------------------------------------------------
+Find exact occurrences of a pattern in a DNA/RNA sequence efficiently without
+re-scanning previously matched characters.
+
+--------------------------------------------------------------------------------
+2.2 CODE FLOW
+--------------------------------------------------------------------------------
+
+User Input (MainForm.cpp)
+    |
+    v
+btnExactMatch_Click()
+    |
+    v
+Validate inputs (sequence + pattern)
+    |
+    v
+ManagedSequenceAnalyzer::ExactMatch() (DNACoreBridge)
+    |
+    v
+SequenceAnalyzer::exactMatch() (DNACore)
+    |
+    v
+KMPMatcher::search() (Core Algorithm)
+    |
+    v
+Results displayed in DataGridView + DFA Trace
+
+--------------------------------------------------------------------------------
+2.3 ALGORITHM EXPLANATION
+--------------------------------------------------------------------------------
+
+KEY CONCEPT:
+KMP avoids re-scanning by using a "failure function" (LPS - Longest Proper 
+Prefix which is also Suffix array).
+
+TWO PHASES:
+
+Phase 1: Preprocessing (Build LPS Array)
+-----------------------------------------
+Pattern: "ATAAA"
+LPS:     [0, 0, 1, 1, 1]
+
+LPS[i] = length of longest proper prefix that is also a suffix for pattern[0..i]
+
+Example:
+- Pattern[0..0] = "A" -> No proper prefix/suffix -> LPS[0] = 0
+- Pattern[0..1] = "AT" -> No match -> LPS[1] = 0
+- Pattern[0..2] = "ATA" -> "A" matches -> LPS[2] = 1
+- Pattern[0..3] = "ATAA" -> "A" matches -> LPS[3] = 1
+- Pattern[0..4] = "ATAAA" -> "A" matches -> LPS[4] = 1
+
+Phase 2: Searching
+------------------
+Text:    "GCTATAAAGCATAAA"
+Pattern: "ATAAA"
+
+Step-by-step:
+1. Compare text[i] with pattern[j]
+2. If match: advance both i and j
+3. If mismatch and j > 0: use LPS to skip -> j = LPS[j-1]
+4. If j == pattern.length: match found at position (i - j)
+
+Example trace:
+Position 0: G != A -> advance text only
+Position 1: C != A -> advance text only
+Position 2: T != A -> advance text only
+Position 3: A == A -> advance both
+Position 4: T == T -> advance both
+Position 5: A == A -> advance both
+Position 6: A == A -> advance both
+Position 7: A == A -> MATCH FOUND at position 3
+
+--------------------------------------------------------------------------------
+2.4 TIME COMPLEXITY
+--------------------------------------------------------------------------------
+O(n + m) where:
+- n = text length
+- m = pattern length
+
+This is optimal for exact string matching!
+
+--------------------------------------------------------------------------------
+2.5 IMPLEMENTATION (SequenceAnalyzer.cpp, lines 28-52)
+--------------------------------------------------------------------------------
+
+std::vector<MatchResult> SequenceAnalyzer::exactMatch(
+    const std::string& pattern) {
+    
+    // 1. Validate inputs
+    if (sequence_.empty() || pattern.empty()) {
+        return {};
+    }
+    
+    // 2. Convert to uppercase (DNA/RNA normalization)
+    std::string upperPattern = toUpperCase(pattern);
+    
+    // 3. Start DFA tracing
+    dfaTracer_.recordStart("KMP", sequence_, upperPattern);
+    
+    // 4. Execute KMP search
+    //    - Preprocessing: Build LPS array inside kmpMatcher_
+    //    - Searching: Scan text using LPS for skips
+    auto results = kmpMatcher_->search(sequence_, upperPattern);
+    
+    // 5. Record matches for execution trace
+    for (const auto& result : results) {
+        dfaTracer_.recordMatch(result.position, result.matchedSequence);
+    }
+    
+    // 6. Record completion with statistics
+    dfaTracer_.recordComplete(results.size(), kmpMatcher_->getComparisons());
+    
+    return results;
+}
+
+--------------------------------------------------------------------------------
+2.6 EXAMPLE OUTPUT
+--------------------------------------------------------------------------------
+Input Sequence: "GCTATAAAGCATAAA"
+Input Pattern:  "ATAAA"
+
+Results:
+- Match at position 3: "ATAAA"
+- Match at position 10: "ATAAA"
+
+DFA Trace:
+=== KMP EXECUTION TRACE ===
+Algorithm: KMP
+Sequence Length: 15 bp
+Pattern: ATAAA
+Pattern Length: 5
+
+Preprocessing: LPS array built
+Searching: 15 comparisons made
+
+Matches Found: 2
+  Position 3: ATAAA
+  Position 10: ATAAA
+
+Total Comparisons: 15
+
+================================================================================
+3. ALGORITHM 2: LEVENSHTEIN DISTANCE (FUZZY/APPROXIMATE MATCHING)
+================================================================================
+
+--------------------------------------------------------------------------------
+3.1 PURPOSE
+--------------------------------------------------------------------------------
+Find approximate matches allowing insertions, deletions, and substitutions.
+Useful for finding similar sequences with mutations or sequencing errors.
+
+--------------------------------------------------------------------------------
+3.2 CODE FLOW
+--------------------------------------------------------------------------------
+
+User Input (MainForm.cpp)
+    |
+    v
+btnApproxMatch_Click()
+    |
+    v
+Get maxDistance from NumericUpDown control
+    |
+    v
+Validate inputs (sequence + pattern)
+    |
+    v
+ManagedSequenceAnalyzer::ApproximateMatch()
+    |
+    v
+SequenceAnalyzer::approximateMatch()
+    |
+    v
+SequenceAnalyzer::fuzzySearch()
+    |
+    v
+For each substring -> editDistance() calculation (DP)
+    |
+    v
+Filter results where distance <= maxDistance
+    |
+    v
+Results displayed with edit distance color-coded
+
+--------------------------------------------------------------------------------
+3.3 ALGORITHM EXPLANATION
+--------------------------------------------------------------------------------
+
+KEY CONCEPT:
+Levenshtein Distance = minimum number of single-character edits needed to
+transform one string into another.
+
+EDIT OPERATIONS:
+1. Insertion: Add a character
+2. Deletion: Remove a character
+3. Substitution: Replace a character
+
+DYNAMIC PROGRAMMING APPROACH:
+
+Example:
+Pattern: "ATAA"
+Text substring: "ACAA"
+
+DP Table Construction:
+       ''  A  C  A  A
+    '' 0   1  2  3  4
+    A  1   0  1  2  3
+    T  2   1  1  2  3
+    A  3   2  2  1  2
+    A  4   3  3  2  1
+
+Reading the table:
+- dp[i][j] = edit distance between pattern[0..i-1] and text[0..j-1]
+- Bottom-right cell = final edit distance = 1
+- Result: One substitution needed (T -> C)
+
+DP FORMULA:
+
+if s1[i] == s2[j]:
+    dp[i][j] = dp[i-1][j-1]  // No operation needed (characters match)
+else:
+    dp[i][j] = 1 + min(
+        dp[i-1][j],      // Deletion from s1
+        dp[i][j-1],      // Insertion into s1
+        dp[i-1][j-1]     // Substitution
+    )
+
+BASE CASES:
+- dp[0][j] = j (j insertions to match empty string with text[0..j-1])
+- dp[i][0] = i (i deletions to match pattern[0..i-1] with empty string)
+
+--------------------------------------------------------------------------------
+3.4 FUZZY SEARCH STRATEGY
+--------------------------------------------------------------------------------
+
+For each position in the sequence:
+1. Extract substrings of length (m - maxDistance) to (m + maxDistance)
+2. Calculate edit distance between substring and pattern
+3. If distance <= maxDistance, record as match
+4. Include edit distance in result for ranking
+
+Example:
+Pattern: "ATAA" (length 4)
+MaxDistance: 2
+
+Try substrings of length 2-6:
+- Position 0, length 3: "ACA" -> distance 2 -> MATCH
+- Position 0, length 4: "ACAA" -> distance 1 -> MATCH
+- Position 0, length 5: "ACAAT" -> distance 2 -> MATCH
+
+--------------------------------------------------------------------------------
+3.5 TIME COMPLEXITY
+--------------------------------------------------------------------------------
+O(n × k × m²) where:
+- n = text length
+- m = pattern length
+- k = range of substring lengths (2 × maxDistance + 1)
+
+Note: This is computationally expensive. For large sequences, consider:
+- Limiting maxDistance (default: 2)
+- Using approximate algorithms like Myers' algorithm
+
+--------------------------------------------------------------------------------
+3.6 IMPLEMENTATION (SequenceAnalyzer.cpp, lines 54-142)
+--------------------------------------------------------------------------------
+
+// Main fuzzy search function
+std::vector<MatchResult> SequenceAnalyzer::fuzzySearch(
+    const std::string& pattern, int maxDistance) {
+    
+    std::vector<MatchResult> results;
+    size_t n = sequence_.length();
+    size_t m = pattern.length();
+    
+    // Check all possible substrings
+    for (size_t i = 0; i < n; ++i) {
+        // Try different lengths around pattern length
+        for (size_t len = (m > maxDistance ? m - maxDistance : 1);
+             len <= m + maxDistance && i + len <= n;
+             ++len) {
+            
+            // Extract substring
+            std::string substring = sequence_.substr(i, len);
+            
+            // Calculate Levenshtein distance
+            int dist = editDistance(substring, pattern);
+            
+            // Accept if within threshold
+            if (dist <= maxDistance) {
+                results.emplace_back(
+                    i,                                        // position
+                    substring,                                // matched sequence
+                    dist,                                     // edit distance
+                    "Approx Match (dist=" + std::to_string(dist) + ")", // type
+                    "Levenshtein"                            // algorithm
+                );
+            }
+        }
+    }
+    return results;
+}
+
+// Levenshtein distance calculation
+int SequenceAnalyzer::editDistance(
+    const std::string& s1, const std::string& s2) {
+    
+    size_t m = s1.length();
+    size_t n = s2.length();
+    
+    // Create DP table
+    std::vector<std::vector<int>> dp(m + 1, std::vector<int>(n + 1));
+    
+    // Initialize base cases
+    for (size_t i = 0; i <= m; ++i) dp[i][0] = static_cast<int>(i);
+    for (size_t j = 0; j <= n; ++j) dp[0][j] = static_cast<int>(j);
+    
+    // Fill DP table
+    for (size_t i = 1; i <= m; ++i) {
+        for (size_t j = 1; j <= n; ++j) {
+            if (s1[i - 1] == s2[j - 1]) {
+                // Characters match - no operation needed
+                dp[i][j] = dp[i - 1][j - 1];
+            } else {
+                // Characters differ - try all three operations
+                dp[i][j] = 1 + std::min({
+                    dp[i - 1][j],      // Delete from s1
+                    dp[i][j - 1],      // Insert into s1
+                    dp[i - 1][j - 1]   // Substitute
+                });
+            }
+        }
+    }
+    
+    return dp[m][n]; // Return final distance
+}
+
+--------------------------------------------------------------------------------
+3.7 EXAMPLE OUTPUT
+--------------------------------------------------------------------------------
+Input Sequence: "ACGATAAGGCATAAA"
+Input Pattern:  "ATAAA"
+Max Distance:   2
+
+Results:
+- Position 4: "ATAAG" - Distance: 1 (1 substitution: A->G)
+- Position 5: "TAAGG" - Distance: 2 (2 operations)
+- Position 10: "ATAAA" - Distance: 0 (exact match)
+
+Color Coding in GUI:
+- Green (distance 0): Exact match
+- Yellow (distance 1-2): Close match
+- Red (distance > 2): Distant match
+
+================================================================================
+4. ALGORITHM 3: AHO-CORASICK MULTI-PATTERN MATCHING
+================================================================================
+
+--------------------------------------------------------------------------------
+4.1 PURPOSE
+--------------------------------------------------------------------------------
+Efficiently search for MULTIPLE patterns simultaneously in a single pass
+through the text. Used for finding all 5 DNA/RNA regulatory motifs at once.
+
+--------------------------------------------------------------------------------
+4.2 CODE FLOW
+--------------------------------------------------------------------------------
+
+User Input (MainForm.cpp)
+    |
+    v
+btnMotifSearch_Click() OR btnAllMotifs_Click()
+    |
+    v
+Get motif type from ComboBox (or search all)
+    |
+    v
+ManagedSequenceAnalyzer::SearchMotif() / SearchAllMotifs()
+    |
+    v
+SequenceAnalyzer::searchMotif() / searchAllMotifs()
+    |
+    v
+MotifDatabase::getMotif() / getAllMotifs()
+    |
+    v
+AhoCorasick::clear()
+    |
+    v
+For each motif: AhoCorasick::addPattern()
+    |
+    v
+AhoCorasick::buildAutomaton()
+    |   (Build Trie + Failure Links + Output Links)
+    |
+    v
+AhoCorasick::search()
+    |   (Single pass through sequence)
+    |
+    v
+Results with all pattern matches returned
+
+--------------------------------------------------------------------------------
+4.3 ALGORITHM EXPLANATION
+--------------------------------------------------------------------------------
+
+KEY CONCEPT:
+Aho-Corasick combines a Trie (prefix tree) with failure links to search for
+multiple patterns simultaneously in O(n + m + z) time.
+
+THREE DATA STRUCTURES:
+
+1. TRIE (Prefix Tree)
+   - Stores all patterns efficiently
+   - Shared prefixes use same nodes
+
+2. FAILURE LINKS
+   - Point to longest proper suffix that is also a prefix
+   - Enable skipping when mismatch occurs
+
+3. OUTPUT LINKS
+   - Chain together all patterns ending at a state
+   - Detect overlapping matches
+
+--------------------------------------------------------------------------------
+4.4 THREE PHASES OF AHO-CORASICK
+--------------------------------------------------------------------------------
+
+PHASE 1: BUILD TRIE
+-------------------
+
+Example with 2 patterns: ["TATA", "ATA"]
+
+       (root=0)
+          |
+          T (state 1)
+          |
+          A (state 2)
+          |
+          T (state 3) [output: "ATA"]
+          |
+          A (state 4) [output: "TATA"]
+
+Additional edges from root for 'A':
+       (root=0)
+          |
+          A (state 5)
+          |
+          T (state 6)
+          |
+          A (state 3) [output: "ATA"] (reused state)
+
+PHASE 2: BUILD FAILURE LINKS
+-----------------------------
+
+Failure links computed using BFS from root:
+
+State | Suffix | Failure Link
+------|--------|-------------
+  0   |   -    |     -
+  1   |   T    |     0 (root)
+  2   |   TA   |     5 (at 'A' from root)
+  3   |   TAT  |     1 (at 'T' from root)
+  4   |   TATA |     2 (at 'TA' from root)
+  5   |   A    |     0 (root)
+  6   |   AT   |     1 (at 'T' from root)
+
+Algorithm:
+1. Start BFS from root
+2. For each state and character:
+   - Follow parent's failure link
+   - Find transition on same character
+   - Set as failure link
+
+PHASE 3: SEARCH
+---------------
+
+Text: "ATATATA"
+
+Step-by-step:
+Position 0: Read 'A'
+  - Current state: 0 (root)
+  - Transition on 'A': go to state 5
+  - Check output: None
+  - Continue
+
+Position 1: Read 'T'
+  - Current state: 5
+  - Transition on 'T': go to state 6
+  - Check output: None
+  - Continue
+
+Position 2: Read 'A'
+  - Current state: 6
+  - Transition on 'A': go to state 3
+  - Check output: "ATA" found at position 0
+  - Continue
+
+Position 3: Read 'T'
+  - Current state: 3
+  - No transition on 'T'
+  - Follow failure link to state 1
+  - Transition on 'T': stay at state 1
+  - Check output: None
+  - Continue
+
+(Continues similarly...)
+
+Matches found:
+- "ATA" at position 0
+- "TATA" at position 1 (overlapping)
+- "ATA" at position 2
+- "ATA" at position 4
+
+--------------------------------------------------------------------------------
+4.5 YOUR 5 DNA/RNA MOTIFS
+--------------------------------------------------------------------------------
+
+The application searches for these regulatory motifs:
+
+1. TATA Box: "TATAAA"
+   - Promoter element ~25-30 bp upstream of transcription start
+   
+2. CAAT Box: "GGCCAATCT"
+   - Promoter element ~75-80 bp upstream of transcription start
+   
+3. GC Box: "GGGCGG"
+   - Promoter element binding site for Sp1 transcription factor
+   
+4. Kozak Sequence: "GCCACCATGG"
+   - Translation initiation site (ribosome binding)
+   
+5. Poly-A Signal (DNA): "AATAAA"
+   - Polyadenylation signal for mRNA processing
+
+--------------------------------------------------------------------------------
+4.6 TIME COMPLEXITY
+--------------------------------------------------------------------------------
+O(n + m + z) where:
+- n = text length
+- m = sum of all pattern lengths
+- z = number of matches found
+
+This is OPTIMAL for multi-pattern matching!
+
+Example:
+- Sequence length: 10,000 bp
+- 5 patterns, total length: 50 characters
+- Naive approach: 5 × O(n) = 50,000 operations
+- Aho-Corasick: O(n + m) = 10,050 operations (5× faster!)
+
+--------------------------------------------------------------------------------
+4.7 IMPLEMENTATION (SequenceAnalyzer.cpp, lines 144-210)
+--------------------------------------------------------------------------------
+
+// Search for single motif
+std::vector<MatchResult> SequenceAnalyzer::searchMotif(int motifType) {
+    if (sequence_.empty()) return {};
+    
+    // Clear previous patterns
+    ahoCorasick_->clear();
+    
+    // Get motif from database
+    auto motif = MotifDatabase::getMotif(
+        static_cast<MotifDatabase::MotifType>(motifType));
+    
+    if (motif.pattern.empty()) return {};
+    
+    // PHASE 1: Add pattern to Aho-Corasick (builds trie node)
+    ahoCorasick_->addPattern(motif.pattern, motif.name);
+    
+    // PHASE 2: Build automaton (failure links + output links)
+    ahoCorasick_->buildAutomaton();
+    
+    // Record trace start
+    dfaTracer_.recordStart("Aho-Corasick", sequence_, motif.pattern);
+    
+    // PHASE 3: Search (traverse trie with failure links)
+    auto results = ahoCorasick_->search(sequence_);
+    
+    // Record matches for trace
+    for (const auto& result : results) {
+        dfaTracer_.recordMatch(result.position, result.matchedSequence);
+    }
+    
+    dfaTracer_.recordComplete(results.size(), 
+        ahoCorasick_->getStateTransitions());
+    
+    return results;
+}
+
+// Search for ALL motifs simultaneously
+std::vector<MatchResult> SequenceAnalyzer::searchAllMotifs() {
+    if (sequence_.empty()) return {};
+    
+    // Clear and prepare for multiple patterns
+    ahoCorasick_->clear();
+    auto allMotifs = MotifDatabase::getAllMotifs();
+    
+    // PHASE 1: Add all 5 motif patterns to same trie
+    for (const auto& motif : allMotifs) {
+        if (!motif.pattern.empty()) {
+            ahoCorasick_->addPattern(motif.pattern, motif.name);
+        }
+    }
+    
+    // PHASE 2: Build single automaton for all patterns
+    // This creates one unified trie with failure links
+    ahoCorasick_->buildAutomaton();
+    
+    // Record trace
+    dfaTracer_.recordStart("Aho-Corasick (Multi-Pattern)", 
+        sequence_, "Multiple Motifs");
+    
+    // PHASE 3: Search ONCE, find ALL patterns
+    // Single pass through sequence finds all 5 motifs!
+    auto results = ahoCorasick_->search(sequence_);
+    
+    // Record matches
+    for (const auto& result : results) {
+        dfaTracer_.recordMatch(result.position, result.matchedSequence);
+    }
+    
+    dfaTracer_.recordComplete(results.size(), 
+        ahoCorasick_->getStateTransitions());
+    
+    return results;
+}
+
+--------------------------------------------------------------------------------
+4.8 EXAMPLE OUTPUT
+--------------------------------------------------------------------------------
+Input Sequence: "GGCCAATCTGCTATAAAACGGGCGGGCCACCATGG"
+
+Search All Motifs Results:
+
+1. CAAT Box found at position 0: "GGCCAATCT"
+2. TATA Box found at position 14: "TATAAA"
+3. Poly-A Signal found at position 16: "AATAAA" (overlapping)
+4. GC Box found at position 23: "GGGCGG"
+5. Kozak Sequence found at position 26: "GCCACCATGG"
+
+DFA Trace:
+=== AHO-CORASICK EXECUTION TRACE ===
+Algorithm: Aho-Corasick (Multi-Pattern)
+Sequence Length: 36 bp
+Patterns: 5 motifs
+
+Automaton Built:
+- States: 48
+- Failure links: 48
+- Output states: 5
+
+Search Results:
+- State transitions: 36
+- Matches found: 5
+
+Match Details:
+  Position 0: GGCCAATCT (CAAT Box)
+  Position 14: TATAAA (TATA Box)
+  Position 16: AATAAA (Poly-A Signal)
+  Position 23: GGGCGG (GC Box)
+  Position 26: GCCACCATGG (Kozak Sequence)
+
+================================================================================
+5. ALGORITHM 4: PDA (PUSHDOWN AUTOMATON) PATTERN MATCHING
+================================================================================
+
+--------------------------------------------------------------------------------
+5.1 PURPOSE
+--------------------------------------------------------------------------------
+Educational pattern matching with detailed execution traces showing stack
+operations. Demonstrates context-free language concepts and provides deep
+insight into the matching process.
+
+--------------------------------------------------------------------------------
+5.2 CODE FLOW
+--------------------------------------------------------------------------------
+
+User Input (MainForm.cpp)
+    |
+    v
+btnPDADetail_Click()
+    |
+    v
+Validate inputs (sequence + pattern)
+    |
+    v
+ManagedSequenceAnalyzer::ClearPDALogger()
+ManagedSequenceAnalyzer::AttachPDAObserver()
+    |
+    v
+ManagedSequenceAnalyzer::PDASearch()
+    |
+    v
+SequenceAnalyzer::pushdownSearch()
+    |
+    v
+PushdownAutomaton::search()
+    |   (State transitions with STACK operations)
+    |
+    v
+PDALogger observes and records:
+    - State changes
+    - Stack PUSH operations
+    - Stack POP operations
+    - Match acceptances
+    - Match rejections
+    |
+    v
+Detailed stack trace displayed in RichTextBox
+
+--------------------------------------------------------------------------------
+5.3 ALGORITHM EXPLANATION
+--------------------------------------------------------------------------------
+
+KEY CONCEPT:
+A Pushdown Automaton (PDA) is a finite automaton with a STACK for memory.
+This allows recognition of context-free patterns (like nested structures,
+palindromes) beyond regular expression capabilities.
+
+PDA FORMAL DEFINITION:
+
+PDA = (Q, ?, ?, ?, q0, Z0, F)
+
+Where:
+Q   = Finite set of states {q0, q1, q2, ..., qn, qAccept, qReject}
+?   = Input alphabet (DNA/RNA nucleotides: {A, T, G, C, U})
+?   = Stack alphabet {Z0, A, T, G, C, U, ...}
+?   = Transition function: Q × ? × ? -> Q × ?*
+q0  = Initial state
+Z0  = Initial stack symbol
+F   = Set of accepting states {qAccept}
+
+TRANSITION FUNCTION:
+?(current_state, input_char, stack_top) -> (next_state, stack_action)
+
+Stack Actions:
+- PUSH: Add symbol to stack top
+- POP: Remove symbol from stack top
+- ? (epsilon): No change to stack
+
+--------------------------------------------------------------------------------
+5.4 PDA STATE MACHINE
+--------------------------------------------------------------------------------
+
+For pattern "ATAT":
+
+States:
+- q0: Initial state
+- q1: Read first 'A'
+- q2: Read first 'T'
+- q3: Read second 'A'
+- q4: Read second 'T'
+- qAccept: Pattern matched
+- qReject: Mismatch occurred
+
+State Diagram:
+
+    A/PUSH    T/PUSH    A/PUSH    T/PUSH
+(q0) ???? (q1) ???? (q2) ???? (q3) ???? (q4) ???? (qAccept)
+  ?         ?         ?         ?         ?
+(qReject) on any mismatch
+
+Transitions:
+?(q0, 'A', Z0) = (q1, PUSH('A'))
+?(q1, 'T', A)  = (q2, PUSH('T'))
+?(q2, 'A', T)  = (q3, PUSH('A'))
+?(q3, 'T', A)  = (q4, POP)
+?(q4, ?, Z0)   = (qAccept, ?)
+?(any, ?expected, any) = (qReject, ?)
+
+--------------------------------------------------------------------------------
+5.5 DETAILED EXECUTION TRACE
+--------------------------------------------------------------------------------
+
+Example: Matching pattern "ATAT" in sequence "GCATATGC"
+
+Position 0: Read 'G'
+  State: q0 (Initial)
+  Expected: 'A'
+  Stack: [Z0]
+  Action: REJECTED (mismatch)
+  Result: Continue to next position
+
+Position 1: Read 'C'
+  State: q0 (Initial)
+  Expected: 'A'
+  Stack: [Z0]
+  Action: REJECTED (mismatch)
+  Result: Continue to next position
+
+Position 2: Read 'A'
+  State: q0 (Initial)
+  Expected: 'A'
+  Stack: [Z0]
+  Action: Transition q0 -> q1
+          PUSH 'A'
+  Stack: [Z0, A]
+  Result: Continue matching
+
+Position 3: Read 'T'
+  State: q1
+  Expected: 'T'
+  Stack: [Z0, A]
+  Action: Transition q1 -> q2
+          PUSH 'T'
+  Stack: [Z0, A, T]
+  Result: Continue matching
+
+Position 4: Read 'A'
+  State: q2
+  Expected: 'A'
+  Stack: [Z0, A, T]
+  Action: Transition q2 -> q3
+          PUSH 'A'
+  Stack: [Z0, A, T, A]
+  Result: Continue matching
+
+Position 5: Read 'T'
+  State: q3
+  Expected: 'T'
+  Stack: [Z0, A, T, A]
+  Action: Transition q3 -> q4
+          POP 'A'
+  Stack: [Z0, A, T]
+  Result: Continue matching
+
+Position 6: End of pattern
+  State: q4
+  Stack: [Z0, A, T]
+  Action: Transition q4 -> qAccept
+  Result: MATCH ACCEPTED at position 2
+
+Final Result:
+- Pattern "ATAT" found at position 2
+
+--------------------------------------------------------------------------------
+5.6 OBSERVER PATTERN INTEGRATION
+--------------------------------------------------------------------------------
+
+The PDA uses the Observer Pattern to provide detailed logging:
+
+PDALogger (Observer) implements:
+- onStateChange(state, inputChar, stackTop)
+- onStackPush(char)
+- onStackPop(char)
+- onMatch(position)
+- onReject(position)
+
+This allows real-time monitoring of PDA execution without modifying
+the core algorithm.
+
+Architecture:
+???????????????????
+? PushdownAutomaton?
+?    (Subject)     ?
+????????????????????
+         ? notifies
+         ?
+???????????????????
+?   PDAObserver   ?
+?   (Interface)   ?
+????????????????????
+         ? implements
+         ?
+???????????????????
+?    PDALogger    ?
+?  (Concrete)     ?
+???????????????????
+
+--------------------------------------------------------------------------------
+5.7 TIME COMPLEXITY
+--------------------------------------------------------------------------------
+O(n × m) where:
+- n = text length
+- m = pattern length
+
+Similar to naive pattern matching, but provides:
+- Detailed execution trace
+- Stack visualization
+- Educational insights
+
+--------------------------------------------------------------------------------
+5.8 IMPLEMENTATION (SequenceAnalyzer.cpp, lines 212-222)
+--------------------------------------------------------------------------------
+
+std::vector<MatchResult> SequenceAnalyzer::pushdownSearch(
+    const std::string& pattern) {
+    
+    // Validate inputs
+    if (sequence_.empty() || pattern.empty()) {
+        return {};
+    }
+    
+    // Convert pattern to uppercase (DNA/RNA normalization)
+    std::string upperPattern = toUpperCase(pattern);
+    
+    // PDA uses its own observer pattern for detailed logging
+    // The observer (PDALogger) must be attached externally
+    // via ManagedSequenceAnalyzer::AttachPDAObserver()
+    
+    // Execute PDA search with detailed stack tracing
+    return pda_->search(sequence_, upperPattern);
+}
+
+Usage in GUI (MainForm.cpp):
+
+void MainForm::btnPDADetail_Click(System::Object^ sender, 
+                                   System::EventArgs^ e) {
+    if (!ValidateInputs()) return;
+    
+    try {
+        // Set sequence
+        analyzer_->SetSequence(txtSequence->Text);
+        
+        // Clear any previous PDA logs
+        analyzer_->ClearPDALogger();
+        
+        // Attach PDA observer for detailed tracing
+        analyzer_->AttachPDAObserver();
+        
+        // Perform PDA search with stack tracing
+        auto results = analyzer_->PDASearch(txtPattern->Text);
+        
+        // Display results in DataGridView
+        DisplayResults(results, "PDA");
+        
+        // Display detailed PDA trace with stack operations
+        String^ trace = analyzer_->GetPDATrace();
+        DisplayTrace(trace);
+        
+        UpdateStatus("PDA detail analysis completed. Found " + 
+                     results->Count + " matches with detailed stack trace.");
+    }
+    catch (Exception^ ex) {
+        MessageBox::Show("Error during PDA detail: " + ex->Message, 
+                         "Error", MessageBoxButtons::OK, 
+                         MessageBoxIcon::Error);
+    }
+}
+
+--------------------------------------------------------------------------------
+5.9 EXAMPLE OUTPUT
+--------------------------------------------------------------------------------
+Input Sequence: "GCATATGC"
+Input Pattern:  "ATAT"
+
+=== PDA DETAILED EXECUTION TRACE ===
+
+Pattern: ATAT (4 characters)
+Sequence: GCATATGC (8 characters)
+
+Starting Position: 0
+?????????????????????????????????????
+Position 0: Read 'G'
+  State: q0 (Initial)
+  Expected: 'A'
+  Stack: [Z0]
+  Action: REJECTED (mismatch: G ? A)
+  Result: Continue to next position
+
+Starting Position: 1
+?????????????????????????????????????
+Position 1: Read 'C'
+  State: q0 (Initial)
+  Expected: 'A'
+  Stack: [Z0]
+  Action: REJECTED (mismatch: C ? A)
+  Result: Continue to next position
+
+Starting Position: 2
+?????????????????????????????????????
+Position 2: Read 'A'
+  State: q0 (Initial) ? q1
+  Expected: 'A' ?
+  Stack: [Z0]
+  Action: PUSH 'A'
+  Stack: [Z0, A] (depth: 2)
+
+Position 3: Read 'T'
+  State: q1 ? q2
+  Expected: 'T' ?
+  Stack: [Z0, A]
+  Action: PUSH 'T'
+  Stack: [Z0, A, T] (depth: 3)
+
+Position 4: Read 'A'
+  State: q2 ? q3
+  Expected: 'A' ?
+  Stack: [Z0, A, T]
+  Action: PUSH 'A'
+  Stack: [Z0, A, T, A] (depth: 4)
+
+Position 5: Read 'T'
+  State: q3 ? q4
+  Expected: 'T' ?
+  Stack: [Z0, A, T, A]
+  Action: POP 'A'
+  Stack: [Z0, A, T] (depth: 3)
+
+Position 6: Pattern complete
+  State: q4 ? qAccept
+  Stack: [Z0, A, T]
+  Result: ? MATCH ACCEPTED at position 2
+  Matched: "ATAT"
+
+?????????????????????????????????????
+Summary:
+- Total positions scanned: 8
+- Match found: 1
+- Position: 2
+- Matched sequence: "ATAT"
+- State transitions: 6
+- Stack operations: 4 PUSH, 1 POP
+- Maximum stack depth: 4
+
+================================================================================
+6. ALGORITHM COMPARISON TABLE
+================================================================================
+
+?????????????????????????????????????????????????????????????????????????
+?  Algorithm   ?    Type     ? Complexity  ?  Use Case   ?   Memory     ?
+?????????????????????????????????????????????????????????????????????????
+?     KMP      ?    Exact    ?  O(n + m)   ?   Single    ?    O(m)      ?
+?              ?             ?             ?   exact     ?   (LPS arr)  ?
+?              ?             ?             ?   pattern   ?              ?
+?????????????????????????????????????????????????????????????????????????
+? Levenshtein  ? Approximate ?  O(n×m²×k)  ?   Fuzzy     ?   O(m×n)     ?
+?              ?   (Fuzzy)   ?             ?  matching   ?  (DP table)  ?
+?              ?             ?             ?  with edits ?              ?
+?????????????????????????????????????????????????????????????????????????
+?Aho-Corasick  ?Multi-Pattern?  O(n+m+z)   ?  Multiple   ?   O(m×p)     ?
+?              ?             ?             ?  patterns   ?  (Trie +     ?
+?              ?             ?             ? simultaneous?   links)     ?
+?????????????????????????????????????????????????????????????????????????
+?     PDA      ?Context-Free ?  O(n × m)   ?Educational  ?  O(m+stack)  ?
+?              ?             ?             ?   Debug     ?              ?
+?              ?             ?             ?  Detailed   ?              ?
+?????????????????????????????????????????????????????????????????????????
+
+Where:
+- n = text/sequence length
+- m = pattern length (or sum of all pattern lengths)
+- z = number of matches found
+- p = number of patterns
+- k = maxDistance range
+
+Performance Notes:
+??????????????????????????????????????????????????????????????????????
+?  Algorithm   ?              Best Use Case                          ?
+??????????????????????????????????????????????????????????????????????
+?     KMP      ? Fastest for single exact pattern                    ?
+?              ? Example: Find "TATAAA" exactly                      ?
+??????????????????????????????????????????????????????????????????????
+? Levenshtein  ? Best for finding similar sequences                  ?
+?              ? Example: Find "TATAAA" allowing 1-2 mutations       ?
+??????????????????????????????????????????????????????????????????????
+?Aho-Corasick  ? Optimal for multiple patterns                       ?
+?              ? Example: Find all 5 motifs in one pass             ?
+??????????????????????????????????????????????????????????????????????
+?     PDA      ? Educational and detailed analysis                   ?
+?              ? Example: Step-by-step pattern matching explanation ?
+??????????????????????????????????????????????????????????????????????
+
+================================================================================
+7. IMPLEMENTATION ARCHITECTURE
+================================================================================
+
+--------------------------------------------------------------------------------
+7.1 LAYER ARCHITECTURE
+--------------------------------------------------------------------------------
+
+??????????????????????????????????????????????????????????????????
+?                      GUI LAYER (C++/CLI)                        ?
+?                     DNAAnalyzerGUI.exe                          ?
+?  ????????????????????????????????????????????????????????????  ?
+?  ? MainForm.cpp / MainForm.h                                 ?  ?
+?  ? - btnExactMatch_Click()                                   ?  ?
+?  ? - btnApproxMatch_Click()                                  ?  ?
+?  ? - btnMotifSearch_Click()                                  ?  ?
+?  ? - btnAllMotifs_Click()                                    ?  ?
+?  ? - btnPDADetail_Click()                                    ?  ?
+?  ????????????????????????????????????????????????????????????  ?
+??????????????????????????????????????????????????????????????????
+                              ? calls
+                              ?
+??????????????????????????????????????????????????????????????????
+?                    BRIDGE LAYER (C++/CLI)                       ?
+?                     DNACoreBridge.dll                           ?
+?  ????????????????????????????????????????????????????????????  ?
+?  ? ManagedSequenceAnalyzer.cpp                               ?  ?
+?  ? - ExactMatch()                                            ?  ?
+?  ? - ApproximateMatch()                                      ?  ?
+?  ? - SearchMotif()                                           ?  ?
+?  ? - SearchAllMotifs()                                       ?  ?
+?  ? - PDASearch()                                             ?  ?
+?  ?                                                            ?  ?
+?  ? TypeConverters.h                                          ?  ?
+?  ? - Convert managed types ? native types                    ?  ?
+?  ????????????????????????????????????????????????????????????  ?
+??????????????????????????????????????????????????????????????????
+                              ? calls
+                              ?
+??????????????????????????????????????????????????????????????????
+?                   CORE LAYER (Native C++)                       ?
+?                       DNACore.lib                               ?
+?  ????????????????????????????????????????????????????????????  ?
+?  ? SequenceAnalyzer.cpp / .h                                 ?  ?
+?  ? - exactMatch()                                            ?  ?
+?  ? - approximateMatch()                                      ?  ?
+?  ? - fuzzySearch()                                           ?  ?
+?  ? - editDistance()                                          ?  ?
+?  ? - searchMotif()                                           ?  ?
+?  ? - searchAllMotifs()                                       ?  ?
+?  ? - pushdownSearch()                                        ?  ?
+?  ????????????????????????????????????????????????????????????  ?
+?  ????????????????????????????????????????????????????????????  ?
+?  ? Algorithm Implementations                                 ?  ?
+?  ? ???????????????????  ????????????????????               ?  ?
+?  ? ? KMPMatcher.cpp  ?  ? AhoCorasick.cpp  ?               ?  ?
+?  ? ? - search()      ?  ? - addPattern()   ?               ?  ?
+?  ? ? - buildLPS()    ?  ? - buildAutomaton()?              ?  ?
+?  ? ???????????????????  ????????????????????               ?  ?
+?  ?                                                            ?  ?
+?  ? ???????????????????????????????????????                  ?  ?
+?  ? ? PushdownAutomaton.cpp               ?                  ?  ?
+?  ? ? - search()                          ?                  ?  ?
+?  ? ? - processTransition()               ?                  ?  ?
+?  ? ? - notifyObservers()                 ?                  ?  ?
+?  ? ???????????????????????????????????????                  ?  ?
+?  ????????????????????????????????????????????????????????????  ?
+?  ????????????????????????????????????????????????????????????  ?
+?  ? Support Classes                                           ?  ?
+?  ? - MotifDatabase.h (5 regulatory motifs)                  ?  ?
+?  ? - InputValidator.cpp (sequence validation)               ?  ?
+?  ? - DFATracer.cpp (execution tracing)                      ?  ?
+?  ? - PDALogger.cpp (observer for PDA)                       ?  ?
+?  ????????????????????????????????????????????????????????????  ?
+??????????????????????????????????????????????????????????????????
+
+--------------------------------------------------------------------------------
+7.2 DATA FLOW
+--------------------------------------------------------------------------------
+
+User Input ? Validation ? Algorithm Selection ? Execution ? Display
+                                                                 
+?????????????    ????????????    ????????????    ????????????    ????????????
+?  Sequence ?????? Validate ?????? Convert  ?????? Execute  ?????? Display  ?
+?  Pattern  ?    ?  Input   ?    ?  to      ?    ?Algorithm ?    ? Results  ?
+?MaxDistance?    ?          ?    ?Uppercase ?    ?          ?    ? + Trace  ?
+?????????????    ????????????    ????????????    ????????????    ????????????
+                       ?                                ?
+                       ? Invalid                        ? MatchResult[]
+                       ?                                ?
+                 ????????????                    ????????????
+                 ?  Error   ?                    ?  DFA/PDA ?
+                 ? Message  ?                    ?  Trace   ?
+                 ????????????                    ????????????
+
+--------------------------------------------------------------------------------
+7.3 CLASS RELATIONSHIPS
+--------------------------------------------------------------------------------
+
+SequenceAnalyzer (Main Controller)
+    ?
+    ???> KMPMatcher (Exact matching)
+    ?    ?? search()
+    ?    ?? buildLPS()
+    ?
+    ???> AhoCorasick (Multi-pattern matching)
+    ?    ?? addPattern()
+    ?    ?? buildAutomaton()
+    ?    ?? search()
+    ?
+    ???> PushdownAutomaton (Context-free matching)
+    ?    ?? search()
+    ?    ?? addObserver()
+    ?         ???> PDALogger (Observer)
+    ?              ?? onStateChange()
+    ?              ?? onStackPush()
+    ?              ?? onStackPop()
+    ?
+    ???> DFATracer (Execution tracing)
+    ?    ?? recordStart()
+    ?    ?? recordMatch()
+    ?    ?? recordComplete()
+    ?
+    ???> MotifDatabase (Static patterns)
+         ?? getAllMotifs()
+         ?? getMotif()
+
+================================================================================
+8. USAGE EXAMPLES
+================================================================================
+
+--------------------------------------------------------------------------------
+8.1 EXAMPLE 1: EXACT MATCH (KMP)
+--------------------------------------------------------------------------------
+
+Input:
+  Sequence: "GCTATAAAGCATAAA"
+  Pattern:  "ATAAA"
+
+Operation:
+  1. Click "Exact Match (KMP)" button
+  2. Algorithm runs KMP search
+  3. LPS array computed: [0,0,1,1,1]
+  4. Text scanned once
+
+Output:
+  Results (2 matches):
+  ????????????????????????????????????????????????????????
+  ? Position ? Sequence ? Distance ?   Type   ?Algorithm ?
+  ????????????????????????????????????????????????????????
+  ?    3     ?  ATAAA   ?    0     ?  Exact   ?   KMP    ?
+  ?   10     ?  ATAAA   ?    0     ?  Exact   ?   KMP    ?
+  ????????????????????????????????????????????????????????
+
+  Trace:
+  === KMP EXECUTION TRACE ===
+  Preprocessing: LPS array [0,0,1,1,1] built
+  Searching: 15 comparisons
+  Matches: 2
+
+--------------------------------------------------------------------------------
+8.2 EXAMPLE 2: APPROXIMATE MATCH (LEVENSHTEIN)
+--------------------------------------------------------------------------------
+
+Input:
+  Sequence:     "ACGATAAGGCATAAA"
+  Pattern:      "ATAAA"
+  Max Distance: 2
+
+Operation:
+  1. Click "Approx Match (Levenshtein)" button
+  2. Set Max Distance = 2
+  3. Algorithm checks all substrings
+  4. Calculates edit distance for each
+
+Output:
+  Results (5 matches):
+  ?????????????????????????????????????????????????????????????
+  ? Position ? Sequence ? Distance ?    Type     ? Algorithm  ?
+  ?????????????????????????????????????????????????????????????
+  ?    4     ?  ATAAG   ?    1     ?Approx (d=1) ?Levenshtein ?
+  ?    5     ?  TAAGG   ?    2     ?Approx (d=2) ?Levenshtein ?
+  ?    6     ?  AAGGC   ?    2     ?Approx (d=2) ?Levenshtein ?
+  ?   10     ?  ATAAA   ?    0     ?Approx (d=0) ?Levenshtein ?
+  ?   11     ?  TAAAA   ?    1     ?Approx (d=1) ?Levenshtein ?
+  ?????????????????????????????????????????????????????????????
+
+  Color coding:
+  - Green: distance = 0 (exact)
+  - Yellow: distance = 1-2 (close)
+  - Red: distance > 2 (far)
+
+--------------------------------------------------------------------------------
+8.3 EXAMPLE 3: MOTIF SEARCH (AHO-CORASICK)
+--------------------------------------------------------------------------------
+
+Input:
+  Sequence: "GGCCAATCTGCTATAAAACGGGCGGGCCACCATGG"
+  Motif:    Search All Motifs
+
+Operation:
+  1. Click "All Motifs (Multi-Pattern)" button
+  2. All 5 motifs loaded into Aho-Corasick
+  3. Single pass through sequence
+  4. All patterns found simultaneously
+
+Output:
+  Results (5 matches):
+  ????????????????????????????????????????????????????????????????????
+  ? Position ?   Sequence   ? Distance ?    Motif     ?  Algorithm   ?
+  ????????????????????????????????????????????????????????????????????
+  ?    0     ?  GGCCAATCT   ?    0     ?  CAAT Box    ?Aho-Corasick ?
+  ?   14     ?  TATAAA      ?    0     ?  TATA Box    ?Aho-Corasick ?
+  ?   16     ?  AATAAA      ?    0     ?  Poly-A DNA  ?Aho-Corasick ?
+  ?   23     ?  GGGCGG      ?    0     ?  GC Box      ?Aho-Corasick ?
+  ?   26     ?  GCCACCATGG  ?    0     ?  Kozak Seq   ?Aho-Corasick ?
+  ????????????????????????????????????????????????????????????????????
+
+  Trace:
+  === AHO-CORASICK MULTI-PATTERN SEARCH ===
+  Patterns: 5 motifs
+  Automaton: 48 states, 48 failure links
+  Search: 36 state transitions
+  Matches: 5 found in single pass
+
+--------------------------------------------------------------------------------
+8.4 EXAMPLE 4: PDA DETAIL (PUSHDOWN AUTOMATON)
+--------------------------------------------------------------------------------
+
+Input:
+  Sequence: "GCATATGC"
+  Pattern:  "ATAT"
+
+Operation:
+  1. Click "PDA Detail (Stack Trace)" button
+  2. PDA logger attached
+  3. Stack operations recorded
+  4. Detailed trace generated
+
+Output:
+  Results (1 match):
+  ????????????????????????????????????????????????????????
+  ? Position ? Sequence ? Distance ?   Type   ?Algorithm ?
+  ????????????????????????????????????????????????????????
+  ?    2     ?   ATAT   ?    0     ?  Exact   ?   PDA    ?
+  ????????????????????????????????????????????????????????
+
+  Detailed Trace:
+  === PDA DETAILED EXECUTION TRACE ===
+  
+  Starting Position: 2
+  ?????????????????????????????????????
+  Position 2: Read 'A'
+    State: q0 ? q1
+    Stack: PUSH 'A'
+    Stack: [Z0, A] (depth: 2)
+  
+  Position 3: Read 'T'
+    State: q1 ? q2
+    Stack: PUSH 'T'
+    Stack: [Z0, A, T] (depth: 3)
+  
+  Position 4: Read 'A'
+    State: q2 ? q3
+    Stack: PUSH 'A'
+    Stack: [Z0, A, T, A] (depth: 4)
+  
+  Position 5: Read 'T'
+    State: q3 ? q4
+    Stack: POP 'A'
+    Stack: [Z0, A, T] (depth: 3)
+  
+  Result: ? MATCH ACCEPTED at position 2
+  
+  Summary:
+  - State transitions: 4
+  - Stack operations: 3 PUSH, 1 POP
+  - Max stack depth: 4
+
+--------------------------------------------------------------------------------
+8.5 EXAMPLE 5: STATISTICS
+--------------------------------------------------------------------------------
+
+Input:
+  Sequence: "GGCCAATCTGCTATAAAACGGGCGGGCCACCATGG"
+
+Operation:
+  1. Click "Statistics (GC Content)" button
+  2. Nucleotide composition calculated
+  3. GC content computed
+  4. All motifs searched automatically
+
+Output:
+  === SEQUENCE STATISTICS ===
+  
+  Total Length: 36 bp
+  Sequence Type: DNA
+  
+  === NUCLEOTIDE COMPOSITION ===
+  Adenine  (A):      8 (22.22%)
+  Thymine  (T):      5 (13.89%)
+  Guanine  (G):     13 (36.11%)
+  Cytosine (C):     10 (27.78%)
+  Uracil   (U):      0 ( 0.00%)
+  
+  GC Content: 63.89%
+  
+  === MOTIFS FOUND ===
+  
+  CAAT Box (GGCCAATCT)
+    Count: 1
+    Positions: 0
+  
+  TATA Box (TATAAA)
+    Count: 1
+    Positions: 14
+  
+  Poly-A Signal (DNA) (AATAAA)
+    Count: 1
+    Positions: 16
+  
+  GC Box (GGGCGG)
+    Count: 1
+    Positions: 23
+  
+  Kozak Sequence (GCCACCATGG)
+    Count: 1
+    Positions: 26
+
+================================================================================
+END OF ALGORITHM DOCUMENTATION
+================================================================================
+
+For more information:
+- Repository: https://github.com/AdiFranDev/AutoMotif_v2.1
+- Contact: See repository for contact information
+
+This documentation covers the implementation details of all pattern matching
+algorithms in the DNA Analyzer v2.1 application.

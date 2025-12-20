@@ -1,11 +1,11 @@
-#pragma once
+﻿#pragma once
 
 #include <string>
 #include <vector>
 #include <utility>
 
 namespace DNACore {
-
+    /**HI SIR IPAPASAR ME 💖/
     /**
      * Database of known DNA/RNA regulatory motifs
      */
@@ -16,8 +16,7 @@ namespace DNACore {
             CAAT_BOX = 2,
             GC_BOX = 3,
             KOZAK_SEQUENCE = 4,
-            POLYA_SIGNAL_DNA = 5,
-			POLYA_SIGNAL_RNA = 6
+            POLYA_SIGNAL = 5
         };
 
         struct MotifEntry {
@@ -61,18 +60,11 @@ namespace DNACore {
                     "Translation initiation site (ribosome binding)"
                 ),
                 MotifEntry(
-                    POLYA_SIGNAL_DNA,
+                    POLYA_SIGNAL,
                     "Poly-A Signal (DNA)",
                     "AATAAA",
                     "Polyadenylation signal for mRNA processing (DNA)"
-                ),
-                MotifEntry(
-                    POLYA_SIGNAL_RNA,
-                    "Poly-A Signal (RNA)",
-                    "AAUAAA",
-                    "Polyadenylation signal for mRNA processing (RNA)"
-				)
-
+				),
             };
         }
 
@@ -91,10 +83,10 @@ namespace DNACore {
         }
 
         /**
-         * Get motif pattern by type ID (1-6)
+         * Get motif pattern by type ID (1-5)
          */
         static std::string getMotifPattern(int typeId, std::string& outName) {
-            if (typeId < 1 || typeId > 6) {
+            if (typeId < 1 || typeId > 5) {
                 outName = "Unknown";
                 return "";
             }
