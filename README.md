@@ -1,10 +1,10 @@
 ﻿## 👥 Authors & Contributors
 
-- **Francis Adrian Esteban** - *Developer* - [YourGitHub](https://github.com/AdiFranDev)
-- **John Carl Ramirez** - *Developer* - [YourGitHub](https://github.com/cjohnramirez)
+- **Francis Adrian Esteban** - *Developer* - [AdiFranDev](https://github.com/AdiFranDev)
+- **John Carl Ramirez** - *Developer* - [cjohnramirez](https://github.com/cjohnramirez)
 - **Cydney Ruelo** - *Developer & Defender*
 - **Julien Marabe** - *Developer*
-- 
+
 # AutoMotif DNA and RNA Sequence Analyzer
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
